@@ -1,0 +1,37 @@
+USER create 2 username2NKlLXs elOf@Y4vxdHuRs2620f.com bY3NAKPS
+PRODUCT create 2 productname-2398 3.99 9
+USER create 3 usernameKPTgmeH 36a9@hbCa.com gOmaQKKw
+PRODUCT create 3 productname-2df398 3.99 32
+USER create 4 usernameFw5hdTh CYDJ@vMLrNA.com GMmhdr6J
+PRODUCT create 4 productname-sdd2398 35.99 9
+ORDER place 9993 3  # This should fail, no order id 9993  
+USER get 2
+PRODUCT create 5 productname-2398 53.99 1
+USER update 2 username:un-4Vofkp8EyolNJYJ email:glud@Ucdl4s6HBjq.com password:BkPpkkW1
+PRODUCT create 6 9889p0roductname-2398 3.79 5
+USER delete 2 4Vofkp8EyolNJYJ glud@Ucdl4s6HBjq.com BkPpkkW1
+PRODUCT info 4
+USER get 4
+PRODUCT update 4 name:granola price:4.99 quantity:20
+USER get 4
+PRODUCT DELETE 4 granola 4.99 20
+USER get 3
+PRODUCT info 4
+USER update 3 username:un-BhxQtm2AAJZZAt3 email:ZwN1@ABiDLCNO9T.com password:wDkglEM2
+PRODUCT info 3
+USER update 4 username:un-6l2yS4n2P2PB77s email:TRhU@L3aKAYoMS8.com password:UpX6pI0F
+PRODUCT info 2
+USER get 4
+USER update 2 username:un-zRXRH3yzGo7VBpI email:Xl9a@tZ3hIG0.com password:EldEnBQz
+USER delete 2 xHZQFlTI1Tx7dHO UGI7@LXnyAw.com z87aXnEM
+USER update 2 username:un-HofHCZu5GlVLLLz email:CDj0@n9HUYJpUuY.com password:0S0YJnb5
+USER get 3
+USER update 2 username:un-j2ejWGkAd3Rzv4C email:rPhV@NypRd7qmDMKda.com password:9cxYT5iV
+ORDER place 3 1
+USER delete 2 j2ejWGkAd3Rzv4C rPhV@NypRd7qmDMKda.com 9cxYT5iV
+USER get 2
+USER delete 2 HofHCZu5GlVLLLz CDj0@n9HUYJpUuY.com 0S0YJnb5
+USER get 2
+USER get 3
+USER get 4
+ORDER place 3 2000  

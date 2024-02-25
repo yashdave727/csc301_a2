@@ -1,0 +1,12 @@
+PRODUCT create 2 productname-2398 desc 3.99 9
+PRODUCT create 3 productname-2df398 desc 3.99 32
+PRODUCT create 4 productname-sdd2398 desc 35.99 9
+PRODUCT create 5 productname-2398 desc 53.99 1
+PRODUCT create 6 9889p0roductname-2398 desc 3.79 5
+PRODUCT info 4
+PRODUCT update 4 name:granola price:4.99 quantity:20
+PRODUCT DELETE 4 granola 4.99 20
+PRODUCT info 4
+PRODUCT info 3
+PRODUCT info 2
+shutdown

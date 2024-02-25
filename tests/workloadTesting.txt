@@ -1,0 +1,18 @@
+USER create 2 username2NKlLXs
+PRODUCT update 5
+PRODUCT create 5 name desc 9 9
+PRODUCT update 5 price:20 quantity:25
+PRODUCT update 
+PRODUCT info 10
+PRODUCT info 5
+USER create 10 username EMAIL password
+USER update 10 username:squidward
+USER get 10
+USER get 2
+ORDER place 5 10 10
+ORDER place 5 10 10
+ORDER place 5 10 10
+ORDER place 5 11 10
+PRODUCT create 5 name desc 9 9
+PRODUCT create 6 name desc 9 -9
+PRODUCT update 5 price:-1
