@@ -58,11 +58,14 @@ public class OrderService
         // Example: Set a custom executor with a fixed-size thread pool
         server.setExecutor(Executors.newFixedThreadPool(20)); // Adjust the pool size as needed
 
-        // Set up context for /order POST request
+        // Set up context for a POST request to the OrderService
         server.createContext("/order", new OrderHandler());
         server.createContext("/user", new UserHandler());
         server.createContext("/product", new ProductHandler());
         server.createContext("/database", new DatabaseHandler());
+
+        // Set up context for a Get request to the OrderService
+        server.createContext("/user/purchased/", new PurchaseHandler());
 
         server.setExecutor(null); // creates a default executor
 
@@ -145,7 +148,7 @@ public class OrderService
                                 int updated_quantity = Integer.parseInt(product_jsonArray.getJSONObject(i).getString("quantity")) - Integer.parseInt(jsonObject.getString("quantity"));
                                 if (updated_quantity >= 0)
                                 {
-                                    //update quantity in database
+                                    //update quantity in product database
                                     product_jsonArray.getJSONObject(i).put("quantity", String.valueOf(updated_quantity));
                                     status_message = "Success";
                                     rCode = 200;
@@ -158,6 +161,44 @@ public class OrderService
                                     catch (IOException e)
                                     {
                                         e.printStackTrace();
+                                    }
+
+
+
+                                    // Iterate to the user who ordered the product and update order info in User Database
+                                    for (int j = 0; j < user_jsonArray.length(); j++)
+                                    {
+                                        if (user_jsonArray.getJSONObject(j).get("id").equals(jsonObject.get("user_id")))
+                                        {
+                                            JSONObject ordersJSON = user_jsonArray.getJSONObject(j).getJSONObject("orders");
+
+                                            // if user has already bought this product then accumulate its quantity with the existing quantity
+                                            if (ordersJSON.has(jsonObject.getString("product_id")))
+                                            {
+                                                int current_quantity = Integer.parseInt(ordersJSON.getString(jsonObject.getString("product_id")));
+                                                int num_purchased = Integer.parseInt(jsonObject.getString("quantity"));
+                                                int accumulated_quantity = current_quantity + num_purchased;
+                                                ordersJSON.put(jsonObject.getString("product_id"), Integer.toString(accumulated_quantity));
+                                            }
+                                            // otherwise create a new product_id key and add it to the ordersJSON in format {product_id, quantity}
+                                            else
+                                            {
+                                                ordersJSON.put(jsonObject.getString("product_id"), jsonObject.getString("quantity"));
+                                            }
+
+                                            user_jsonArray.getJSONObject(j).put("orders", ordersJSON);
+
+
+                                            // Write the entire User's JSONArray to the file
+                                            try (FileWriter fileWriter = new FileWriter(userPath))
+                                            {
+                                                user_jsonArray.write(fileWriter);
+                                            }
+                                            catch (IOException e)
+                                            {
+                                                e.printStackTrace();
+                                            }
+                                        }
                                     }
                                 }
                                 else
@@ -359,6 +400,68 @@ public class OrderService
             {
                 //If we get a weird error, it's a bad HTTP
                 e.printStackTrace();
+                sendResponse(exchange, 400, "{}");
+            }
+            exchange.close();
+        }
+    }
+
+    static class PurchaseHandler implements HttpHandler
+    {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException
+        {
+            try
+            {
+                // Handle GET request for /user
+                if ("GET".equals(exchange.getRequestMethod()))
+                {
+                    //Initialize variables
+                    String URI = exchange.getRequestURI().toString();
+                    String userID = URI.substring(16);
+                    String response = "";
+                    boolean validSearch = false;
+
+                    // Specify the file path where you want to search the JSON data
+                    String filePath = System.getProperty("user.dir") + "/compiled/UserService/user_database.json";
+
+                    // Read our JSON file database, and fill it into a JSONArray
+                    FileReader fileReader = new FileReader(filePath);
+                    JSONTokener tokener = new JSONTokener(fileReader);
+                    JSONArray jsonArray = new JSONArray(tokener);
+
+                    //find the matching user id within our jsonArray
+                    for (int i = 0; i < jsonArray.length(); i++)
+                    {
+                        if (jsonArray.getJSONObject(i).get("id").equals(userID))
+                        {
+                            response = jsonArray.getJSONObject(i).get("orders").toString();
+                            validSearch = true;
+                        }
+                    }
+
+                    if (validSearch)
+                    {
+                        sendResponse(exchange, 200, response);
+                    }
+                    else
+                    {
+                        //status code 404 id does not exist
+                        sendResponse(exchange, 404, "{}");
+                    }
+                    fileReader.close();
+                    tokener.close();
+                }
+                else
+                {
+                    //status code 405 for non Get Requests
+                    sendResponse(exchange, 405, "{}");
+                }
+            }
+            catch (Exception e)
+            {
+                e.printStackTrace();
+                //If any weird error occurs, then UserService has received a bad http request
                 sendResponse(exchange, 400, "{}");
             }
             exchange.close();

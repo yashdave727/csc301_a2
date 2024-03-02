@@ -18,6 +18,22 @@ def make_post_request(url, data):
     except Exception as e:
         print(e)
 
+def make_get_request(url):
+    try:
+        headers = {'Accept': 'application/json', 'Authorization': 'Bearer your_token'}
+        
+        # Making a GET request
+        response = requests.get(url, headers=headers)
+        
+        if response.status_code == 200:
+            print(f"GET request succeeded: {response.status_code}")
+            print("Response: ", response.text)
+        else:
+            print(f"GET request failed: {response.status_code}")
+            print("Response: ", response.text)
+    except Exception as e:
+        print(e)
+
 if __name__ == "__main__":
 
     if len(sys.argv) != 2:
@@ -54,6 +70,7 @@ if __name__ == "__main__":
         with open(file_path, 'r') as file:
             # Read the entire content of the file
             for line in file:
+                request_type = "POST"
                 #Step 2: parse workload file
                 tokens = line.split()
                 data = {}
@@ -101,10 +118,14 @@ if __name__ == "__main__":
                             data['quantity'] = tokens[6]
                             
                     elif tokens[0] == "ORDER":
-                        endpoint = "/order"
-                        data['product_id'] = tokens[2]
-                        data['user_id'] = tokens[3]
-                        data['quantity'] = tokens[4]                
+                        if tokens[1] == "get":
+                            endpoint = "/user/purchased/" + tokens[2]
+                            request_type = "GET"
+                        else:
+                            endpoint = "/order"
+                            data['product_id'] = tokens[2]
+                            data['user_id'] = tokens[3]
+                            data['quantity'] = tokens[4]
                     
                     elif tokens[0] == 'restart':
                         endpoint = "/database"
@@ -127,7 +148,10 @@ if __name__ == "__main__":
                 json_data = json.dumps(data)
                 #print(json_data)
                 #print(url + endpoint)
-                make_post_request(url + endpoint, json_data)
+                if request_type == "POST":
+                    make_post_request(url + endpoint, json_data)
+                elif request_type == "GET":
+                    make_get_request(url + endpoint)
                 print("----------------------------------")
                 
     except FileNotFoundError:
