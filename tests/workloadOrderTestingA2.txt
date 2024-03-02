@@ -1,0 +1,14 @@
+PRODUCT create 5 name desc 9 9
+PRODUCT update 5 price:20 quantity:25
+PRODUCT create 6 name desc 9 9
+PRODUCT update 6 price:20 quantity:250
+USER create 10 username EMAIL password
+USER update 10 username:squidward
+ORDER place 5 10 10
+ORDER place 5 10 10
+ORDER place 6 10 100
+USER get 10
+ORDER get 10
+ORDER get 11
+USER create 100 username EMAIL password
+ORDER get 100

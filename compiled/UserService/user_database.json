@@ -1,1 +1,1 @@
-[{"password":"password","id":"10","command":"create","email":"EMAIL","username":"squidward"}]
+[{"password":"password","orders":{"5":"40","6":"200"},"id":"10","command":"create","email":"EMAIL","username":"squidward"},{"password":"password","orders":{},"id":"100","command":"create","email":"EMAIL","username":"username"}]

@@ -215,6 +215,9 @@ public class UserService
 
             if (!matchingID)
             {
+                // Implement a new key for to track the orders for this user (A2)
+                jsonObject.put("orders", new JSONObject());
+
                 // Add our new json to the JSONArray
                 jsonArray.put(jsonObject);
 
@@ -234,7 +237,13 @@ public class UserService
                 {
                     jsonObject.remove("command");
                 }
+                // do the same with the "orders" key and value before sending back the json as a response
+                if (jsonObject.has("orders"))
+                {
+                    jsonObject.remove("orders");
+                }
 
+                // Recalibrate password as its hashed form
                 jsonObject.put("password", calculateHash(jsonObject.getString("password")));
 
                 String response = jsonObject.toString();
@@ -332,6 +341,11 @@ public class UserService
                 if (jsonArray.getJSONObject(validUpdate).has("command"))
                 {
                     jsonArray.getJSONObject(validUpdate).remove("command");
+                }
+                // do the same with the "orders" key and value before sending back the json as a response
+                if (jsonArray.getJSONObject(validUpdate).has("orders"))
+                {
+                    jsonArray.getJSONObject(validUpdate).remove("orders");
                 }
 
                 // return the hash of user's password
@@ -590,6 +604,11 @@ public class UserService
                             if (jsonArray.getJSONObject(i).has("command"))
                             {
                                 jsonArray.getJSONObject(i).remove("command");
+                            }
+                            // do the same with the "orders" key and value before sending back the json as a response
+                            if (jsonArray.getJSONObject(i).has("orders"))
+                            {
+                                jsonArray.getJSONObject(i).remove("orders");
                             }
 
                             // return the hash of user's password
