@@ -413,7 +413,7 @@ public class OrderService
         {
             try
             {
-                // Handle GET request for /user
+                // Handle GET request for /user/purchased
                 if ("GET".equals(exchange.getRequestMethod()))
                 {
                     //Initialize variables
@@ -496,7 +496,7 @@ public class OrderService
             connection.setDoOutput(true);
 
             // Set the request body content type
-            connection.setRequestProperty("Content-Type", "text/plain; charset=UTF-8");
+            connection.setRequestProperty("Content-Type", "application/json");
 
             // Get the output stream of the connection
             try (OutputStream os = connection.getOutputStream())
