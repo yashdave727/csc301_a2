@@ -10,7 +10,7 @@ compile_code() {
     javac -d "$script_dir/compiled/UserService" -cp "$script_dir/src/json-20231013.jar" "$script_dir/src/UserService"/*.java
 
     # Copy all necessary dependencies
-    cp "$script_dir/src/WorkloadParser.py" "$script_dir/compiled/"
+    cp "$script_dir/src/workload_parser.py" "$script_dir/compiled/"
     cp "$script_dir/src/json-20231013.jar" "$script_dir/compiled/"
 
     # Create databases
@@ -52,7 +52,7 @@ start_wg() {
         exit 1
     fi
 
-    python3 "$script_dir/compiled/WorkloadParser.py" "$1"
+    python3 "$script_dir/compiled/workload_parser.py" "$1"
 }
 
 # Main script
