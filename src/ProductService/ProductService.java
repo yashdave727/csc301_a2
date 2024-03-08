@@ -200,13 +200,6 @@ public class ProductService
                 return;
             }
 
-            if (jsonObject.getFloat("price") < 0 || jsonObject.getInt("quantity") < 0)
-            {
-                sendResponse(exchange, 400, new JSONObject().toString());
-                exchange.close();
-                return;
-            }
-
             //Verify non-negative price and quantity
             if (jsonObject.getFloat("price") < 0 || jsonObject.getInt("quantity") < 0)
             {
