@@ -519,19 +519,21 @@ public class OrderService
      */
     public static ResponseTuple readResponse(HttpURLConnection con) throws IOException {
         StringBuilder response = new StringBuilder();
+        int status_code = con.getResponseCode();
+        String output = "{}";
 
-        // Read the response content
-        try (BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream())))
+        if (status_code == 200)
         {
-            String inputLine;
-            while ((inputLine = in.readLine()) != null)
-            {
-                response.append(inputLine);
+            // Read the response content
+            try (BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()))) {
+                String inputLine;
+                while ((inputLine = in.readLine()) != null) {
+                    response.append(inputLine);
+                }
             }
+            output = response.toString();
         }
 
-        String output =  response.toString();
-        int status_code = con.getResponseCode();
 
         ResponseTuple tuple = new ResponseTuple(output, status_code);
 
