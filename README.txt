@@ -1,4 +1,4 @@
-CSC301 A1
+CSC301 A2
 
 Our code is compiled using the ./runme.sh -c command from the rumne.sh script.
 

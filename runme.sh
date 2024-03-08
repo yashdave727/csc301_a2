@@ -18,7 +18,7 @@ compile_code() {
     echo '[]' > "$script_dir/compiled/UserService/user_database.json"
     echo '[]' > "$script_dir/compiled/ProductService/product_backup.json"
     echo '[]' > "$script_dir/compiled/ProductService/product_database.json"
-    
+
     if [ "$?" -eq 0 ]; then
         echo "Compilation successful."
     else
