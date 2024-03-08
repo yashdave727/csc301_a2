@@ -81,7 +81,6 @@ public class UserService
             tokener.close();
         }
         catch (IOException e) {
-            e.printStackTrace();
             System.err.println("Error creating user backup.");
         }
 
@@ -94,7 +93,6 @@ public class UserService
             fileWriter.close();
 
         } catch (IOException e) {
-            e.printStackTrace();
             System.err.println("Error clearing UserService.json");
         }
 
