@@ -357,6 +357,7 @@ public class UserService
         }
         catch (Exception e)
         {
+            e.printStackTrace();
             //If any weird error occurs, then UserService has received a bad http request
             sendResponse(exchange, 400, new JSONObject().toString());
         }

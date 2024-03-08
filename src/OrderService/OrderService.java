@@ -520,17 +520,13 @@ public class OrderService
     public static ResponseTuple readResponse(HttpURLConnection con) throws IOException {
         StringBuilder response = new StringBuilder();
 
-        // Check if the response code indicates success
-        if (con.getResponseCode() == HttpURLConnection.HTTP_OK)
+        // Read the response content
+        try (BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream())))
         {
-            // Read the response content
-            try (BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream())))
+            String inputLine;
+            while ((inputLine = in.readLine()) != null)
             {
-                String inputLine;
-                while ((inputLine = in.readLine()) != null)
-                {
-                    response.append(inputLine);
-                }
+                response.append(inputLine);
             }
         }
 
