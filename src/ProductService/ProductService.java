@@ -161,7 +161,7 @@ public class ProductService
                         case "shutdown":
                             shutdown(exchange, jsonObject); break;
                         default:
-                            sendResponse(exchange, 400, "{}"); break;
+                            sendResponse(exchange, 400, new JSONObject().toString()); break;
                     }
                 }
             }
@@ -169,7 +169,7 @@ public class ProductService
             {
                 e.printStackTrace();
                 //If any weird error occurs, then ProductService has received a bad http request
-                sendResponse(exchange, 400, "{}");
+                sendResponse(exchange, 400, new JSONObject().toString());
             }
             exchange.close();
         }
@@ -195,15 +195,15 @@ public class ProductService
                     && jsonObject.has("quantity")
                     && jsonObject.has("id")))
             {
-                sendResponse(exchange, 400, "{}");
+                sendResponse(exchange, 400, new JSONObject().toString());
                 exchange.close();
                 return;
             }
 
             //Verify non-negative price and quantity
-            if (Double.parseDouble(jsonObject.getString("price")) < 0 || Double.parseDouble(jsonObject.getString("quantity")) < 0)
+            if (jsonObject.getFloat("price") < 0 || jsonObject.getInt("quantity") < 0)
             {
-                sendResponse(exchange, 400, "{}");
+                sendResponse(exchange, 400, new JSONObject().toString());
                 exchange.close();
                 return;
             }
@@ -219,7 +219,7 @@ public class ProductService
             //find the matching product id within our jsonArray
             for (int i = 0; i < jsonArray.length(); i++)
             {
-                if (jsonArray.getJSONObject(i).get("id").equals(jsonObject.get("id")))
+                if (jsonArray.getJSONObject(i).getInt("id") == (jsonObject.getInt("id")))
                 {
                     matchingID = true;
                 }
@@ -254,7 +254,7 @@ public class ProductService
             else
             {
                 //Respond with status code 409 if we encounter a duplicate ID
-                sendResponse(exchange, 409, "{}");
+                sendResponse(exchange, 409, new JSONObject().toString());
             }
             fileReader.close();
             tokener.close();
@@ -263,7 +263,7 @@ public class ProductService
         {
             e.printStackTrace();
             //If any weird error occurs, then ProductService has received a bad http request
-            sendResponse(exchange, 400, "{}");
+            sendResponse(exchange, 400, new JSONObject().toString());
         }
     }
 
@@ -291,56 +291,44 @@ public class ProductService
             //find the matching product id within our jsonArray
             for (int i = 0; i < jsonArray.length(); i++)
             {
-                if (jsonArray.getJSONObject(i).get("id").equals(jsonObject.get("id")))
+                if (jsonArray.getJSONObject(i).getInt("id") == (jsonObject.getInt("id")))
                 {
                     // Update only the fields provided in the request
                     if (jsonObject.has("name"))
                     {
-                        //delete the specifier (name:)
-                        jsonObject.put("name", jsonObject.getString("name").substring(5));
-
                         //update it to the jsonArray
                         jsonArray.getJSONObject(i).put("name", jsonObject.getString("name"));
                     }
                     if (jsonObject.has("description"))
                     {
-                        //delete the specifier (description:)
-                        jsonObject.put("description", jsonObject.getString("description").substring(12));
-
                         //update it to the jsonArray
                         jsonArray.getJSONObject(i).put("description", jsonObject.getString("description"));
                     }
                     if (jsonObject.has("price"))
                     {
-                        //delete the specifier (price:)
-                        jsonObject.put("price", jsonObject.getString("price").substring(6));
-
                         // Verify non-negative price
-                        if (Double.parseDouble(jsonObject.getString("price")) < 0)
+                        if (jsonObject.getFloat("price") < 0)
                         {
-                            sendResponse(exchange, 400, "{}");
+                            sendResponse(exchange, 400, new JSONObject().toString());
                             exchange.close();
                             return;
                         }
 
                         //update it to the jsonArray
-                        jsonArray.getJSONObject(i).put("price", jsonObject.getString("price"));
+                        jsonArray.getJSONObject(i).put("price", jsonObject.getFloat("price"));
                     }
                     if (jsonObject.has("quantity"))
                     {
-                        //delete the specifier (quantity:)
-                        jsonObject.put("quantity", jsonObject.getString("quantity").substring(9));
-
                         // Verify non-negative quantity
-                        if (Double.parseDouble(jsonObject.getString("quantity")) < 0)
+                        if (jsonObject.getInt("quantity") < 0)
                         {
-                            sendResponse(exchange, 400, "{}");
+                            sendResponse(exchange, 400, new JSONObject().toString());
                             exchange.close();
                             return;
                         }
 
                         //update it to the jsonArray
-                        jsonArray.getJSONObject(i).put("quantity", jsonObject.getString("quantity"));
+                        jsonArray.getJSONObject(i).put("quantity", jsonObject.getInt("quantity"));
                     }
                     validUpdate = i;
                 }
@@ -373,7 +361,7 @@ public class ProductService
             else
             {
                 //status code 404 if product id does not exist
-                sendResponse(exchange, 404, "{}");
+                sendResponse(exchange, 404, new JSONObject().toString());
             }
             fileReader.close();
             tokener.close();
@@ -381,7 +369,7 @@ public class ProductService
         catch (Exception e)
         {
             //If any weird error occurs, then ProductService has received a bad http request
-            sendResponse(exchange, 400, "{}");
+            sendResponse(exchange, 400, new JSONObject().toString());
         }
     }
 
@@ -406,13 +394,16 @@ public class ProductService
             JSONTokener tokener = new JSONTokener(fileReader);
             JSONArray jsonArray = new JSONArray(tokener);
 
+            // Tolerance for float comparison
+            float epsilon = 1e-6f;
+
             //find the matching product id within our jsonArray
             for (int i = 0; i < jsonArray.length(); i++)
             {
-                if (jsonArray.getJSONObject(i).get("id").equals(jsonObject.get("id"))
+                if (jsonArray.getJSONObject(i).getInt("id") == (jsonObject.getInt("id"))
                         && jsonArray.getJSONObject(i).get("name").equals(jsonObject.get("name"))
-                        && jsonArray.getJSONObject(i).get("quantity").equals(jsonObject.get("quantity"))
-                        && jsonArray.getJSONObject(i).get("price").equals(jsonObject.get("price")))
+                        && jsonArray.getJSONObject(i).getInt("quantity") == jsonObject.getInt("quantity")
+                        && Math.abs(jsonArray.getJSONObject(i).getFloat("price") - jsonObject.getFloat("price")) < epsilon)
                 {
                     jsonArray.remove(i);
                     validDeletion = true;
@@ -435,7 +426,7 @@ public class ProductService
             else
             {
                 //status code 400 if product id does not exist
-                sendResponse(exchange, 400, "{}");
+                sendResponse(exchange, 400, new JSONObject().toString());
             }
             fileReader.close();
             tokener.close();
@@ -443,7 +434,7 @@ public class ProductService
         catch (Exception e)
         {
             //If any weird error occurs, then ProductService has received a bad http request
-            sendResponse(exchange, 400, "{}");
+            sendResponse(exchange, 400, new JSONObject().toString());
         }
     }
 
@@ -497,7 +488,7 @@ public class ProductService
                     catch (Exception e)
                     {
                         System.out.println("Error writing to " + filePath);
-                        sendResponse(exchange, 400, "{}");
+                        sendResponse(exchange, 400, new JSONObject().toString());
                     }
                 }
             }
@@ -505,7 +496,7 @@ public class ProductService
             if(!validRestart)
             {
                 // Trying to restart without any previous shutdown data results in an error
-                sendResponse(exchange, 400, "{}");
+                sendResponse(exchange, 400, new JSONObject().toString());
             }
 
             fileReader.close();
@@ -515,7 +506,7 @@ public class ProductService
         {
             e.printStackTrace();
             //If any weird error occurs, then ProductService has received a bad http request
-            sendResponse(exchange, 400, "{}");
+            sendResponse(exchange, 400, new JSONObject().toString());
         }
 
         exchange.close();
@@ -565,7 +556,7 @@ public class ProductService
         catch (Exception e)
         {
             //If any weird error occurs, then ProductService has received a bad http request
-            sendResponse(exchange, 400, "{}");
+            sendResponse(exchange, 400, new JSONObject().toString());
         }
     }
 
@@ -591,7 +582,7 @@ public class ProductService
                 {
                     //Initialize variables
                     String URI = exchange.getRequestURI().toString();
-                    String productID = URI.substring(9);
+                    int productID = Integer.parseInt(URI.substring(9));
                     String response = "";
                     boolean validSearch = false;
 
@@ -606,7 +597,7 @@ public class ProductService
                     //find the matching product id within our jsonArray
                     for (int i = 0; i < jsonArray.length(); i++)
                     {
-                        if (jsonArray.getJSONObject(i).get("id").equals(productID))
+                        if (jsonArray.getJSONObject(i).getInt("id") == productID)
                         {
                             // remove the "command" key and value before sending back the json as a response
                             // normally guaranteed to have a command, but this if-statement checks just in case
@@ -626,7 +617,7 @@ public class ProductService
                     else
                     {
                         //status code 404 id does not exist
-                        sendResponse(exchange, 404, "{}");
+                        sendResponse(exchange, 404, new JSONObject().toString());
                     }
                     fileReader.close();
                     tokener.close();
@@ -634,13 +625,13 @@ public class ProductService
                 else
                 {
                     //status code 405 for non Get Requests
-                    sendResponse(exchange, 405, "{}");
+                    sendResponse(exchange, 405, new JSONObject().toString());
                 }
             }
             catch (Exception e)
             {
                 //If any weird error occurs, then ProductService has received a bad http request
-                sendResponse(exchange, 400, "{}");
+                sendResponse(exchange, 400, new JSONObject().toString());
             }
             exchange.close();
         }

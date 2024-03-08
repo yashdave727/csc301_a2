@@ -158,7 +158,7 @@ public class UserService
                         case "shutdown":
                             shutdown(exchange, jsonObject); break;
                         default:
-                            sendResponse(exchange, 400, "{}"); break;
+                            sendResponse(exchange, 400, new JSONObject().toString()); break;
                     }
                 }
             }
@@ -166,7 +166,7 @@ public class UserService
             {
                 e.printStackTrace();
                 //If any weird error occurs, then UserService has received a bad http request
-                sendResponse(exchange, 400, "{}");
+                sendResponse(exchange, 400, new JSONObject().toString());
             }
             exchange.close();
         }
@@ -191,7 +191,7 @@ public class UserService
                     && jsonObject.has("password")
                     && jsonObject.has("id")))
             {
-                sendResponse(exchange, 400, "{}");
+                sendResponse(exchange, 400, new JSONObject().toString());
                 exchange.close();
                 return;
             }
@@ -207,7 +207,7 @@ public class UserService
             //find the matching user id within our jsonArray
             for (int i = 0; i < jsonArray.length(); i++)
             {
-                if (jsonArray.getJSONObject(i).get("id").equals(jsonObject.get("id")))
+                if (jsonArray.getJSONObject(i).getInt("id") == jsonObject.getInt("id"))
                 {
                     matchingID = true;
                 }
@@ -254,7 +254,7 @@ public class UserService
             else
             {
                 //Respond with status code 409 if we encounter a duplicate ID
-                sendResponse(exchange, 409, "{}");
+                sendResponse(exchange, 409, new JSONObject().toString());
             }
             fileReader.close();
             tokener.close();
@@ -263,7 +263,7 @@ public class UserService
         {
             e.printStackTrace();
             //If any weird error occurs, then UserService has received a bad http request
-            sendResponse(exchange, 400, "{}");
+            sendResponse(exchange, 400, new JSONObject().toString());
         }
     }
 
@@ -292,30 +292,21 @@ public class UserService
             //find the matching user id within our jsonArray
             for (int i = 0; i < jsonArray.length(); i++)
             {
-                if (jsonArray.getJSONObject(i).get("id").equals(jsonObject.get("id")))
+                if (jsonArray.getJSONObject(i).getInt("id") == jsonObject.getInt("id"))
                 {
                     // Update only the fields provided in the request
                     if (jsonObject.has("username"))
                     {
-                        //delete the specifier (username:)
-                        jsonObject.put("username", jsonObject.getString("username").substring(9));
-
                         //update it to the jsonArray
                         jsonArray.getJSONObject(i).put("username", jsonObject.getString("username"));
                     }
                     if (jsonObject.has("email"))
                     {
-                        //delete the specifier (email:)
-                        jsonObject.put("email", jsonObject.getString("email").substring(6));
-
                         //update it to the jsonArray
                         jsonArray.getJSONObject(i).put("email", jsonObject.getString("email"));
                     }
                     if (jsonObject.has("password"))
                     {
-                        //delete the specifier (password:)
-                        jsonObject.put("password", jsonObject.getString("password").substring(9));
-
                         //update it to the jsonArray
                         jsonArray.getJSONObject(i).put("password", jsonObject.getString("password"));
                     }
@@ -359,7 +350,7 @@ public class UserService
             else
             {
                 //status code 404 if user id does not exist
-                sendResponse(exchange, 404, "{}");
+                sendResponse(exchange, 404, new JSONObject().toString());
             }
             fileReader.close();
             tokener.close();
@@ -367,7 +358,7 @@ public class UserService
         catch (Exception e)
         {
             //If any weird error occurs, then UserService has received a bad http request
-            sendResponse(exchange, 400, "{}");
+            sendResponse(exchange, 400, new JSONObject().toString());
         }
     }
 
@@ -396,7 +387,7 @@ public class UserService
             //find the matching user id within our jsonArray
             for (int i = 0; i < jsonArray.length(); i++)
             {
-                if (jsonArray.getJSONObject(i).get("id").equals(jsonObject.get("id"))
+                if (jsonArray.getJSONObject(i).getInt("id") == (jsonObject.getInt("id"))
                         && jsonArray.getJSONObject(i).get("username").equals(jsonObject.get("username"))
                         && jsonArray.getJSONObject(i).get("email").equals(jsonObject.get("email"))
                         && jsonArray.getJSONObject(i).get("password").equals(jsonObject.get("password")))
@@ -422,7 +413,7 @@ public class UserService
             else
             {
                 //status code 404 if user id does not exist
-                sendResponse(exchange, 404, "{}");
+                sendResponse(exchange, 404, new JSONObject().toString());
             }
             fileReader.close();
             tokener.close();
@@ -430,7 +421,7 @@ public class UserService
         catch (Exception e)
         {
             //If any weird error occurs, then UserService has received a bad http request
-            sendResponse(exchange, 400, "{}");
+            sendResponse(exchange, 400, new JSONObject().toString());
         }
         exchange.close();
     }
@@ -485,7 +476,7 @@ public class UserService
                     catch (Exception e)
                     {
                         System.out.println("Error writing to " + filePath);
-                        sendResponse(exchange, 400, "{}");
+                        sendResponse(exchange, 400, new JSONObject().toString());
                     }
                 }
             }
@@ -493,7 +484,7 @@ public class UserService
             if(!validRestart)
             {
                 // Trying to restart without any previous shutdown data results in an error
-                sendResponse(exchange, 400, "{}");
+                sendResponse(exchange, 400, new JSONObject().toString());
             }
 
             fileReader.close();
@@ -503,7 +494,7 @@ public class UserService
         {
             e.printStackTrace();
             //If any weird error occurs, then UserService has received a bad http request
-            sendResponse(exchange, 400, "{}");
+            sendResponse(exchange, 400, new JSONObject().toString());
         }
 
         exchange.close();
@@ -552,7 +543,7 @@ public class UserService
         catch (Exception e)
         {
             //If any weird error occurs, then UserService has received a bad http request
-            sendResponse(exchange, 400, "{}");
+            sendResponse(exchange, 400, new JSONObject().toString());
         }
     }
 
@@ -582,7 +573,7 @@ public class UserService
                 {
                     //Initialize variables
                     String URI = exchange.getRequestURI().toString();
-                    String userID = URI.substring(6);
+                    int userID = Integer.parseInt(URI.substring(6));
                     String response = "";
                     boolean validSearch = false;
 
@@ -597,7 +588,7 @@ public class UserService
                     //find the matching user id within our jsonArray
                     for (int i = 0; i < jsonArray.length(); i++)
                     {
-                        if (jsonArray.getJSONObject(i).get("id").equals(userID))
+                        if (jsonArray.getJSONObject(i).getInt("id") == (userID))
                         {
                             // remove the "command" key and value before sending back the json as a response
                             // normally guaranteed to have a command, but this if-statement checks just in case
@@ -626,7 +617,7 @@ public class UserService
                     else
                     {
                         //status code 404 id does not exist
-                        sendResponse(exchange, 404, "{}");
+                        sendResponse(exchange, 404, new JSONObject().toString());
                     }
                     fileReader.close();
                     tokener.close();
@@ -634,14 +625,14 @@ public class UserService
                 else
                 {
                     //status code 405 for non Get Requests
-                    sendResponse(exchange, 405, "{}");
+                    sendResponse(exchange, 405, new JSONObject().toString());
                 }
             }
             catch (Exception e)
             {
                 e.printStackTrace();
                 //If any weird error occurs, then UserService has received a bad http request
-                sendResponse(exchange, 400, "{}");
+                sendResponse(exchange, 400, new JSONObject().toString());
             }
             exchange.close();
         }
