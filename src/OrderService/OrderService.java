@@ -126,7 +126,7 @@ public class OrderService
                     //Verify that a valid user_id exists in the user database
                     for (int i = 0; i < user_jsonArray.length(); i++)
                     {
-                        if (user_jsonArray.getJSONObject(i).get("id").equals(jsonObject.get("user_id")))
+                        if (user_jsonArray.getJSONObject(i).getInt("id") == jsonObject.getInt("user_id"))
                         {
                             validUser = true;
                         }
@@ -139,13 +139,13 @@ public class OrderService
 
                     if (validUser)
                     {
-                        //Verify that a valid product_id exists in the user database
+                        //Verify that a valid product_id exists in the product database
                         for (int i = 0; i < product_jsonArray.length(); i++)
                         {
-                            if (product_jsonArray.getJSONObject(i).get("id").equals(jsonObject.get("product_id")))
+                            if (product_jsonArray.getJSONObject(i).getInt("id") == (jsonObject.getInt("product_id")))
                             {
                                 //make sure the updated quantity (post order) can't go below zero
-                                int updated_quantity = Integer.parseInt(product_jsonArray.getJSONObject(i).getString("quantity")) - Integer.parseInt(jsonObject.getString("quantity"));
+                                int updated_quantity = product_jsonArray.getJSONObject(i).getInt("quantity") - jsonObject.getInt("quantity");
                                 if (updated_quantity >= 0)
                                 {
                                     //update quantity in product database
@@ -168,22 +168,22 @@ public class OrderService
                                     // Iterate to the user who ordered the product and update order info in User Database
                                     for (int j = 0; j < user_jsonArray.length(); j++)
                                     {
-                                        if (user_jsonArray.getJSONObject(j).get("id").equals(jsonObject.get("user_id")))
+                                        if (user_jsonArray.getJSONObject(j).getInt("id") == (jsonObject.getInt("user_id")))
                                         {
                                             JSONObject ordersJSON = user_jsonArray.getJSONObject(j).getJSONObject("orders");
 
                                             // if user has already bought this product then accumulate its quantity with the existing quantity
-                                            if (ordersJSON.has(jsonObject.getString("product_id")))
+                                            if (ordersJSON.has(String.valueOf(jsonObject.getInt("product_id"))))
                                             {
-                                                int current_quantity = Integer.parseInt(ordersJSON.getString(jsonObject.getString("product_id")));
-                                                int num_purchased = Integer.parseInt(jsonObject.getString("quantity"));
+                                                int current_quantity = ordersJSON.getInt(String.valueOf(jsonObject.getInt("product_id")));
+                                                int num_purchased = jsonObject.getInt("quantity");
                                                 int accumulated_quantity = current_quantity + num_purchased;
-                                                ordersJSON.put(jsonObject.getString("product_id"), Integer.toString(accumulated_quantity));
+                                                ordersJSON.put(String.valueOf(jsonObject.getInt("product_id")), accumulated_quantity);
                                             }
                                             // otherwise create a new product_id key and add it to the ordersJSON in format {product_id, quantity}
                                             else
                                             {
-                                                ordersJSON.put(jsonObject.getString("product_id"), jsonObject.getString("quantity"));
+                                                ordersJSON.put(String.valueOf(jsonObject.getInt("product_id")), jsonObject.getInt("quantity"));
                                             }
 
                                             user_jsonArray.getJSONObject(j).put("orders", ordersJSON);
@@ -270,11 +270,11 @@ public class OrderService
                         endpoint = "/user";
                         break;
                     case "get":
-                        endpoint = "/user/"+jsonObject.getString("id");
+                        endpoint = "/user/"+jsonObject.getInt("id");
                         break;
                     default:
                     {
-                        sendResponse(exchange, 400, "{}"); return;
+                        sendResponse(exchange, 400, new JSONObject().toString()); return;
                     }
                 }
 
@@ -287,7 +287,7 @@ public class OrderService
             catch (Exception e)
             {
                 //If we get a weird error, it's a bad HTTP request
-                sendResponse(exchange, 400, "{}");
+                sendResponse(exchange, 400, new JSONObject().toString());
             }
             exchange.close();
         }
@@ -328,10 +328,10 @@ public class OrderService
                             endpoint = "/product";
                             break;
                     case "info":
-                            endpoint = "/product/"+jsonObject.getString("id");
+                            endpoint = "/product/"+jsonObject.getInt("id");
                             break;
                     default:
-                            sendResponse(exchange, 400, "{}");
+                            sendResponse(exchange, 400, new JSONObject().toString());
                 }
 
                 // Send an HTTP Request to another server, collect the response
@@ -343,7 +343,7 @@ public class OrderService
             catch (Exception e)
             {
                 //If we get a weird error, it's a bad HTTP request
-                sendResponse(exchange, 400, "{}");
+                sendResponse(exchange, 400, new JSONObject().toString());
             }
             exchange.close();
         }
@@ -390,17 +390,17 @@ public class OrderService
                         if (order.getStatus_code() == 200 && user.getStatus_code() == 200)
                             sendResponse(exchange, order.getStatus_code(), order.getResponse());
                         else
-                            {sendResponse(exchange, 400, "{}"); return;}
+                            {sendResponse(exchange, 400, new JSONObject().toString()); return;}
                         break;
                     }
-                    default: {sendResponse(exchange, 400, "{}"); return;}
+                    default: {sendResponse(exchange, 400, new JSONObject().toString()); return;}
                 }
             }
             catch (Exception e)
             {
                 //If we get a weird error, it's a bad HTTP
                 e.printStackTrace();
-                sendResponse(exchange, 400, "{}");
+                sendResponse(exchange, 400, new JSONObject().toString());
             }
             exchange.close();
         }
@@ -418,7 +418,7 @@ public class OrderService
                 {
                     //Initialize variables
                     String URI = exchange.getRequestURI().toString();
-                    String userID = URI.substring(16);
+                    int userID = Integer.parseInt(URI.substring(16));
                     String response = "";
                     boolean validSearch = false;
 
@@ -433,7 +433,7 @@ public class OrderService
                     //find the matching user id within our jsonArray
                     for (int i = 0; i < jsonArray.length(); i++)
                     {
-                        if (jsonArray.getJSONObject(i).get("id").equals(userID))
+                        if (jsonArray.getJSONObject(i).getInt("id") == (userID))
                         {
                             response = jsonArray.getJSONObject(i).get("orders").toString();
                             validSearch = true;
@@ -447,7 +447,7 @@ public class OrderService
                     else
                     {
                         //status code 404 id does not exist
-                        sendResponse(exchange, 404, "{}");
+                        sendResponse(exchange, 404, new JSONObject().toString());
                     }
                     fileReader.close();
                     tokener.close();
@@ -455,14 +455,14 @@ public class OrderService
                 else
                 {
                     //status code 405 for non Get Requests
-                    sendResponse(exchange, 405, "{}");
+                    sendResponse(exchange, 405, new JSONObject().toString());
                 }
             }
             catch (Exception e)
             {
                 e.printStackTrace();
                 //If any weird error occurs, then UserService has received a bad http request
-                sendResponse(exchange, 400, "{}");
+                sendResponse(exchange, 400, new JSONObject().toString());
             }
             exchange.close();
         }
