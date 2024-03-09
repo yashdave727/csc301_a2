@@ -26,45 +26,49 @@ CURRENT_PRODUCT_SERVICE = 0
 
 app = Flask(__name__)
 
-# Redirect routes
 @app.route('/<endpoint>', methods=['POST'])
 def forward_request(endpoint):
     """Forward the request to the appropriate service.
     possible endpoints include:
     /user
+    /user/<id>
     /product
+    /product/<id>
     """
-    # Get the port of the next available service
-    port = get_port(endpoint)
-    if port:
-        # Forward the request
-        return redirect(f"http://localhost:{port}/{endpoint}")
-    # Invalid endpoint
-    return jsonify({"error": "Invalid endpoint"}), 400
+    if "user" in endpoint:
+        # Forward to the next user service
+        port = next_user_service()
+    elif "product" in endpoint:
+        # Forward to the next product service
+        port = next_product_service()
+    else:
+        # Invalid endpoint
+        return jsonify({"error": "Invalid endpoint"}), 400
+
+    # Forward the request
+    return redirect(f"http://localhost:{port}/{endpoint}")
 
 @app.route('/<endpoint>/<_id>', methods=['GET'])
 def forward_request_with_id(endpoint, _id):
     """Forward the request to the appropriate service.
     possible endpoints include:
+    /user
     /user/<id>
+    /product
     /product/<id>
     """
-    # Get the port of the next available service
-    port = get_port(endpoint)
-    if port:
-        # Forward the request
-        return redirect(f"http://localhost:{port}/{endpoint}/{_id}")
-    # Invalid endpoint
-    return jsonify({"error": "Invalid endpoint"}), 400
-
-def get_port(endpoint):
-    """Return the port of the next available service.
-    """
     if "user" in endpoint:
-        return next_user_service()
-    if "product" in endpoint:
-        return next_product_service()
-    return None
+        # Forward to the next user service
+        port = next_user_service()
+    elif "product" in endpoint:
+        # Forward to the next product service
+        port = next_product_service()
+    else:
+        # Invalid endpoint
+        return jsonify({"error": "Invalid endpoint"}), 400
+
+    # Forward the request
+    return redirect(f"http://localhost:{port}/{endpoint}/{_id}")
 
 def next_user_service():
     """Return the port of the next available user service.
@@ -75,7 +79,6 @@ def next_product_service():
     """Return the port of the next available product service.
     """
     return PRODUCT_PORT + (CURRENT_PRODUCT_SERVICE % NUM_PRODUCT_SERVICES)
-
 def main():
     """Main function for the ISCS module. This function reads in the command line arguments,
     prints out the configuration, and starts listening for requests.
