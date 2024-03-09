@@ -1,6 +1,6 @@
-restart
 USER create 2 username2NKlLXs elOf@Y4vxdHuRs2620f.com bY3NAKPS
 USER create 3 usernameKPTgmeH 36a9@hbCa.com gOmaQKKw
+USER create 4 usernameFw5hdTh CYDJ@vMLrNA.com GMmhdr6J
 USER create 4 usernameFw5hdTh CYDJ@vMLrNA.com GMmhdr6J
 USER get 2
 USER update 2 username:un-4Vofkp8EyolNJYJ email:glud@Ucdl4s6HBjq.com password:BkPpkkW1
@@ -23,4 +23,3 @@ USER delete 2 HofHCZu5GlVLLLz CDj0@n9HUYJpUuY.com 0S0YJnb5
 USER get 2
 USER get 3
 USER get 4
-shutdown

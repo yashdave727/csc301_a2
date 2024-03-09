@@ -2,6 +2,7 @@ import com.sun.net.httpserver.HttpServer;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpExchange;
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 
@@ -22,6 +23,7 @@ import java.security.NoSuchAlgorithmException;
  */
 public class UserService
 {
+    static final UserDatabase userDB = new UserDatabase();
     /**
      * The main method for the UserService application. Starts an HTTP server to handle user-related requests.
      *
@@ -177,93 +179,125 @@ public class UserService
      * @param jsonObject The JSONObject containing user data.
      * @throws IOException If an I/O error occurs during the user creation process.
      */
+//    private static void create(HttpExchange exchange, JSONObject jsonObject) throws IOException {
+//        try
+//        {
+//            //Initialize variables
+//            boolean matchingID = false;
+//
+//            //Verify that all fields are present for creation
+//            if (!(jsonObject.has("username")
+//                    && jsonObject.has("email")
+//                    && jsonObject.has("password")
+//                    && jsonObject.has("id")))
+//            {
+//                sendResponse(exchange, 400, new JSONObject().toString());
+//                exchange.close();
+//                return;
+//            }
+//
+//            // Specify the file path where you want to create the JSON data
+//            String filePath = System.getProperty("user.dir") + "/compiled/UserService/user_database.json";
+//
+//            // Read our JSON file database, and fill it into a JSONArray
+//            FileReader fileReader = new FileReader(filePath);
+//            JSONTokener tokener = new JSONTokener(fileReader);
+//            JSONArray jsonArray = new JSONArray(tokener);
+//
+//            //find the matching user id within our jsonArray
+//            for (int i = 0; i < jsonArray.length(); i++)
+//            {
+//                if (jsonArray.getJSONObject(i).getInt("id") == jsonObject.getInt("id"))
+//                {
+//                    matchingID = true;
+//                }
+//            }
+//
+//            if (!matchingID)
+//            {
+//                // Implement a new key for to track the orders for this user (A2)
+//                jsonObject.put("orders", new JSONObject());
+//
+//                // Add our new json to the JSONArray
+//                jsonArray.put(jsonObject);
+//
+//                // Write the entire JSONArray to the file
+//                try (FileWriter fileWriter = new FileWriter(filePath))
+//                {
+//                    jsonArray.write(fileWriter);
+//                }
+//                catch (IOException e)
+//                {
+//                    e.printStackTrace();
+//                }
+//
+//                // remove the "command" key and value before sending back the json as a response
+//                // normally guaranteed to have a command, but this if-statement checks just in case
+//                if (jsonObject.has("command"))
+//                {
+//                    jsonObject.remove("command");
+//                }
+//                // do the same with the "orders" key and value before sending back the json as a response
+//                if (jsonObject.has("orders"))
+//                {
+//                    jsonObject.remove("orders");
+//                }
+//
+//                // Recalibrate password as its hashed form
+//                jsonObject.put("password", calculateHash(jsonObject.getString("password")));
+//
+//                String response = jsonObject.toString();
+//
+//                // Respond with status code 200 for a valid creation
+//                sendResponse(exchange, 200, response);
+//            }
+//            else
+//            {
+//                //Respond with status code 409 if we encounter a duplicate ID
+//                sendResponse(exchange, 409, new JSONObject().toString());
+//            }
+//            fileReader.close();
+//            tokener.close();
+//        }
+//        catch (Exception e)
+//        {
+//            e.printStackTrace();
+//            //If any weird error occurs, then UserService has received a bad http request
+//            sendResponse(exchange, 400, new JSONObject().toString());
+//        }
+//    }
     private static void create(HttpExchange exchange, JSONObject jsonObject) throws IOException {
-        try
-        {
-            //Initialize variables
-            boolean matchingID = false;
-
-            //Verify that all fields are present for creation
-            if (!(jsonObject.has("username")
-                    && jsonObject.has("email")
-                    && jsonObject.has("password")
-                    && jsonObject.has("id")))
-            {
-                sendResponse(exchange, 400, new JSONObject().toString());
-                exchange.close();
+        try {
+            // Check if all required fields are present, including the ID
+            if (!jsonObject.has("id") || !jsonObject.has("username") || !jsonObject.has("email") || !jsonObject.has("password")) {
+                sendResponse(exchange, 400, "{\"error\":\"Missing required user information including ID.\"}");
                 return;
             }
 
-            // Specify the file path where you want to create the JSON data
-            String filePath = System.getProperty("user.dir") + "/compiled/UserService/user_database.json";
+            // Extracting data from JSON object
+            int id = jsonObject.getInt("id");
+            String username = jsonObject.getString("username");
+            String email = jsonObject.getString("email");
+            String password = jsonObject.getString("password"); // Consider hashing
 
-            // Read our JSON file database, and fill it into a JSONArray
-            FileReader fileReader = new FileReader(filePath);
-            JSONTokener tokener = new JSONTokener(fileReader);
-            JSONArray jsonArray = new JSONArray(tokener);
+            // Attempt to create a new user in the database, passing the ID
+            int statusCode = userDB.createUser(id, username, email, password);
 
-            //find the matching user id within our jsonArray
-            for (int i = 0; i < jsonArray.length(); i++)
-            {
-                if (jsonArray.getJSONObject(i).getInt("id") == jsonObject.getInt("id"))
-                {
-                    matchingID = true;
-                }
+            // Crafting response based on operation result
+            if (statusCode == 200) {
+                sendResponse(exchange, 200, "{\"message\":\"User created successfully.\"}");
+            } else if (statusCode == 409) {
+                sendResponse(exchange, 409, "{\"error\":\"User with provided ID already exists or conflict occurred.\"}");
+            } else {
+                sendResponse(exchange, 500, "{\"error\":\"Internal server error.\"}");
             }
-
-            if (!matchingID)
-            {
-                // Implement a new key for to track the orders for this user (A2)
-                jsonObject.put("orders", new JSONObject());
-
-                // Add our new json to the JSONArray
-                jsonArray.put(jsonObject);
-
-                // Write the entire JSONArray to the file
-                try (FileWriter fileWriter = new FileWriter(filePath))
-                {
-                    jsonArray.write(fileWriter);
-                }
-                catch (IOException e)
-                {
-                    e.printStackTrace();
-                }
-
-                // remove the "command" key and value before sending back the json as a response
-                // normally guaranteed to have a command, but this if-statement checks just in case
-                if (jsonObject.has("command"))
-                {
-                    jsonObject.remove("command");
-                }
-                // do the same with the "orders" key and value before sending back the json as a response
-                if (jsonObject.has("orders"))
-                {
-                    jsonObject.remove("orders");
-                }
-
-                // Recalibrate password as its hashed form
-                jsonObject.put("password", calculateHash(jsonObject.getString("password")));
-
-                String response = jsonObject.toString();
-
-                // Respond with status code 200 for a valid creation
-                sendResponse(exchange, 200, response);
-            }
-            else
-            {
-                //Respond with status code 409 if we encounter a duplicate ID
-                sendResponse(exchange, 409, new JSONObject().toString());
-            }
-            fileReader.close();
-            tokener.close();
-        }
-        catch (Exception e)
-        {
+        } catch (Exception e) {
             e.printStackTrace();
-            //If any weird error occurs, then UserService has received a bad http request
-            sendResponse(exchange, 400, new JSONObject().toString());
+            sendResponse(exchange, 400, "{\"error\":\"Bad request due to exception.\"}");
         }
     }
+
+
 
     /**
      * Updates an existing user based on the provided JSON data.
@@ -673,12 +707,20 @@ public class UserService
      * @param response The content of the response to be sent.
      * @throws IOException If an I/O error occurs during the response sending process.
      */
-    public static void sendResponse(HttpExchange exchange, int rCode, String response) throws IOException
-    {
-        exchange.sendResponseHeaders(rCode, response.length());
-        OutputStream os = exchange.getResponseBody();
-        os.write(response.getBytes(StandardCharsets.UTF_8));
-        os.close();
+    public static void sendResponse(HttpExchange exchange, int rCode, String response) throws IOException {
+        // Convert the response String to bytes to correctly measure its length in bytes
+        byte[] responseBytes = response.getBytes(StandardCharsets.UTF_8);
+
+        // Set the necessary response headers before sending the response body
+        exchange.getResponseHeaders().set("Content-Type", "application/json; charset=UTF-8");
+
+        // Correctly set the content length using the byte length of the response
+        exchange.sendResponseHeaders(rCode, responseBytes.length);
+
+        // Write the response bytes and close the OutputStream
+        try (OutputStream os = exchange.getResponseBody()) {
+            os.write(responseBytes);
+        }
     }
 
     /**
