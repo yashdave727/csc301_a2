@@ -69,12 +69,18 @@ def get_port(endpoint):
 def next_user_service():
     """Return the port of the next available user service.
     """
-    return USER_PORT + (CURRENT_USER_SERVICE % NUM_USER_SERVICES)
+    global CURRENT_USER_SERVICE
+    port = USER_PORT + (CURRENT_USER_SERVICE % NUM_USER_SERVICES)
+    CURRENT_USER_SERVICE += 1
+    return port
 
 def next_product_service():
     """Return the port of the next available product service.
     """
-    return PRODUCT_PORT + (CURRENT_PRODUCT_SERVICE % NUM_PRODUCT_SERVICES)
+    global CURRENT_PRODUCT_SERVICE
+    port = PRODUCT_PORT + (CURRENT_PRODUCT_SERVICE % NUM_PRODUCT_SERVICES)
+    CURRENT_PRODUCT_SERVICE += 1
+    return port
 
 def main():
     """Main function for the ISCS module. This function reads in the command line arguments,
