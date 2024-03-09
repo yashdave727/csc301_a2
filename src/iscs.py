@@ -1,7 +1,7 @@
 '''
 iscs.py
 
-ISCS: Inter-System Communication System
+ISCS: Inter-Service Communication System
 
 This module works as a load balancer and a request forwarder for the
 User, Product and Order systems.
