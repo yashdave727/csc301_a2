@@ -11,7 +11,7 @@ compile_code() {
 
     # Copy all necessary dependencies
     cp "$script_dir/src/workload_parser.py" "$script_dir/compiled/"
-    cp "$script_dir/src/iscs.py" "$script_dir/compiled/"
+    cp -r "$script_dir/src/ISCS/" "$script_dir/compiled/"
     cp "$script_dir/src/json-20231013.jar" "$script_dir/compiled/"
 
     # Create databases
@@ -58,7 +58,7 @@ start_wg() {
 
 # Function to start the ISCS
 start_iscs() {
-    python3 "$script_dir/compiled/iscs.py"
+    python3 "$script_dir/compiled/ISCS/iscs.py"
 }
 
 # Main script
