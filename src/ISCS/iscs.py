@@ -12,17 +12,18 @@ Usage:
 '''
 
 import sys
+import os
+import json
 from flask import Flask, redirect, jsonify
 
-# Global variables
-ISCS_PORT = 7999
+# Global variables (default values)
 ORDER_PORT = 7998
+ISCS_PORT = 7999
 USER_PORT = 8000
 PRODUCT_PORT = 9000
-NUM_USER_SERVICES = 1
-NUM_PRODUCT_SERVICES = 1
-CURRENT_USER_SERVICE = 0
-CURRENT_PRODUCT_SERVICE = 0
+
+USER_IPS = ["localhost"]
+PRODUCT_IPS = ["localhost"]
 
 app = Flask(__name__)
 
@@ -34,11 +35,18 @@ def forward_request(endpoint):
     /user
     /product
     """
-    # Get the port of the next available service
-    port = get_port(endpoint)
-    if port:
-        # Forward the request
-        return redirect(f"http://localhost:{port}/{endpoint}")
+    # Get the next IP address for the given service
+    next_ip = get_next_service_ip(endpoint)
+
+    # Debugging info
+    if app.debug and next_ip:
+        print(f"Forwarding request to {next_ip}/{endpoint}", file=sys.stderr)
+    elif not next_ip and app.debug:
+        print(f"Invalid endpoint: {endpoint}", file=sys.stderr)
+
+    if next_ip:
+        # Forward the request to the next service
+        return redirect(f"{next_ip}/{endpoint}", code=307)
     # Invalid endpoint
     return jsonify({"error": "Invalid endpoint"}), 400
 
@@ -49,71 +57,139 @@ def forward_request_with_id(endpoint, _id):
     /user/<id>
     /product/<id>
     """
-    # Get the port of the next available service
-    port = get_port(endpoint)
-    if port:
-        # Forward the request
-        return redirect(f"http://localhost:{port}/{endpoint}/{_id}")
+    # Get the next IP address for the given service
+    next_ip = get_next_service_ip(endpoint)
+
+    # Debugging info
+    if app.debug and next_ip:
+        print(f"Forwarding request to {next_ip}/{endpoint}/{_id}", file=sys.stderr)
+    elif not next_ip and app.debug:
+        print(f"Invalid endpoint: {endpoint}", file=sys.stderr)
+
+    if next_ip:
+        # Forward the request to the next service
+        return redirect(f"{next_ip}/{endpoint}/{_id}", code=307)
     # Invalid endpoint
     return jsonify({"error": "Invalid endpoint"}), 400
 
-def get_port(endpoint):
-    """Return the port of the next available service.
+# Error handling (defined in a for loop to avoid repetition)
+
+# Error codes using the 4xx and 5xx ranges
+error_codes = [400, 401, 403, 404, 405, 500, 501, 502, 503, 504]
+
+for _code in error_codes:
+    @app.errorhandler(_code)
+    def error_handler(error, code=_code):
+        """Error handler for the given error code."""
+        print("Error", error, file=sys.stderr)
+        return jsonify({"error": f"Error {code}"}), code
+
+# Helper functions
+
+def get_next_service_ip(endpoint_name):
+    """Get the IP address with port of the service with the given endpoint name.
     """
-    if "user" in endpoint:
-        return next_user_service()
-    if "product" in endpoint:
-        return next_product_service()
+    # Get the next IP address for the given service
+    if endpoint_name == "user":
+        ip = USER_IPS.pop(0)
+        USER_IPS.append(ip)
+        return f"http://{ip}:{USER_PORT}"
+    if endpoint_name == "product":
+        ip = PRODUCT_IPS.pop(0)
+        PRODUCT_IPS.append(ip)
+        return f"http://{ip}:{PRODUCT_PORT}"
     return None
 
-def next_user_service():
-    """Return the port of the next available user service.
+def read_ips():
+    """Read in the IP addresses of the user and product services.
+    These IP addresses are read in from a file called "ips.json" which is located in the same
+    directory as this file. The file should be in the following format:
+    {
+        "user": ["ip1", "ip2", ...],
+        "product": ["ip1", "ip2", ...]
+        "user_port": port_number,
+        "product_port": port_number
+    }
     """
-    global CURRENT_USER_SERVICE
-    port = USER_PORT + (CURRENT_USER_SERVICE % NUM_USER_SERVICES)
-    CURRENT_USER_SERVICE += 1
-    return port
+    global USER_IPS, PRODUCT_IPS, USER_PORT, PRODUCT_PORT
 
-def next_product_service():
-    """Return the port of the next available product service.
-    """
-    global CURRENT_PRODUCT_SERVICE
-    port = PRODUCT_PORT + (CURRENT_PRODUCT_SERVICE % NUM_PRODUCT_SERVICES)
-    CURRENT_PRODUCT_SERVICE += 1
-    return port
+    # change directory to the current file's directory (to read in the ips.json file)
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
+
+    with open("ips.json", "r", encoding="ASCII") as file:
+        data = json.load(file)
+        USER_IPS = data["user"]
+        PRODUCT_IPS = data["product"]
+        USER_PORT = data["user_port"]
+        PRODUCT_PORT = data["product_port"]
+
+    # if debug is set, print out the number of user and product services and their IP addresses
+    if app.debug:
+        print(f"User Services: (total: {len(USER_IPS)})", file=sys.stderr)
+        for ip in USER_IPS:
+            print(f"  {ip}:{USER_PORT}", file=sys.stderr)
+        print(f"Product Services: (total: {len(PRODUCT_IPS)})", file=sys.stderr)
+        for ip in PRODUCT_IPS:
+            print(f"  {ip}:{PRODUCT_PORT}", file=sys.stderr)
 
 def main():
     """Main function for the ISCS module. This function reads in the command line arguments,
     prints out the configuration, and starts listening for requests.
     """
     # Read in the command line arguments
+    global ISCS_PORT
     match (len(sys.argv)):
-        case 7:
-            # Use the command line arguments
-            global ISCS_PORT, ORDER_PORT, PRODUCT_PORT
-            global NUM_PRODUCT_SERVICES, USER_PORT, NUM_USER_SERVICES
-            ISCS_PORT = int(sys.argv[1])
-            ORDER_PORT = int(sys.argv[2])
-            PRODUCT_PORT = int(sys.argv[3])
-            NUM_PRODUCT_SERVICES = int(sys.argv[4])
-            USER_PORT = int(sys.argv[5])
-            NUM_USER_SERVICES = int(sys.argv[6])
+        case 3:
+            # Set the iscs port
+            try:
+                ISCS_PORT = int(sys.argv[1])
+            except ValueError:
+                print("Invalid ISCS port value", file=sys.stderr)
+                sys.exit(1)
+            # Set the debug flag
+            if sys.argv[2] == "-d":
+                app.debug = True
+            else:
+                print(f"Invalid option {sys.argv[2]}", file=sys.stderr)
+                sys.exit(1)
+        case 2:
+            # If the second argument is the debug flag
+            if sys.argv[1] == "-d":
+                app.debug = True
+            else:
+                try:
+                    ISCS_PORT = int(sys.argv[1])
+                except ValueError:
+                    print(f"Invalid argument {sys.argv[1]}", file=sys.stderr)
+                    sys.exit(1)
         case 1:
-            # Use defaults
+            # Use default
+            print("Using default ISCS port", file=sys.stderr)
             pass
         case _:
             # Invalid number of arguments
-            print("Usage: ./iscs.py <port> <order_service_port> <base_product_service_port>",
-                  "<num_product_services> <base_user_service_port> <num_user_services>")
+            print("Usage: ./iscs.py [order_service_port] [-d]", file=sys.stderr)
             sys.exit(1)
 
-    # Print out the configuration (print to stderr so it doesn't interfere with the output)
-    print(f"ISCS_PORT: {ISCS_PORT}", file=sys.stderr)
-    print(f"ORDER_PORT: {ORDER_PORT}", file=sys.stderr)
-    print(f"PRODUCT_PORT: {PRODUCT_PORT}", file=sys.stderr)
-    print(f"NUM_PRODUCT_SERVICES: {NUM_PRODUCT_SERVICES}", file=sys.stderr)
-    print(f"USER_PORT: {USER_PORT}", file=sys.stderr)
-    print(f"NUM_USER_SERVICES: {NUM_USER_SERVICES}", file=sys.stderr)
+    # Read in the IP addresses of the user and product services
+    read_ips()
+
+    # Print out the configuration if the app is running and the debug flag is set
+    if app.debug:
+        print("ISCS Configuration:", file=sys.stderr)
+        print(f"  ISCS Port: {ISCS_PORT}", file=sys.stderr)
+        # Print out the user service IPs and port
+        print("  User Services:", file=sys.stderr)
+        for ip in USER_IPS:
+            print(f"    {ip}:{USER_PORT}", file=sys.stderr)
+
+        # Print out the product service IPs and port
+        print("  Product Services:", file=sys.stderr)
+        for ip in PRODUCT_IPS:
+            print(f"    {ip}:{PRODUCT_PORT}", file=sys.stderr)
+
+    print("Starting ISCS...", file=sys.stderr)
 
     # Start listening for requests with a multi-threaded server
     app.run(port=ISCS_PORT, threaded=True)
