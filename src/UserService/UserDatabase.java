@@ -7,6 +7,7 @@ import java.sql.*;
 /**
  * UserDatabase class provides methods for managing user data in a SQLite database.
  */
+
 class UserDatabase {
 
     private final String url = "jdbc:postgresql://localhost:5435/assignmentdb";
@@ -46,7 +47,8 @@ class UserDatabase {
                     "id INTEGER PRIMARY KEY," +
                     "username TEXT NOT NULL," +
                     "email TEXT NOT NULL," +
-                    "password TEXT NOT NULL)";
+                    "password TEXT NOT NULL," +
+                    "deleted BOOLEAN NOT NULL DEFAULT FALSE)";
             statement.execute(sql);
         }
         catch (SQLException e) {
@@ -73,9 +75,12 @@ class UserDatabase {
             statement.executeUpdate();
             return 200; // OK - User created successfully
         }
+        // The PostgreSQL 23505 UNIQUE VIOLATION error occurs when a unique constraint is violated. See the link below
+        // https://www.metisdata.io/knowledgebase/errors/postgresql-23505#:~:text=The%20PostgreSQL%
+        // 2023505%20UNIQUE%20VIOLATION,fail%20to%20complete%20the%20operation.
         catch (SQLException e) {
-            if (e.getMessage().contains("UNIQUE constraint failed")) {
-                return 409;
+            if (e.getSQLState().equals("23505")) {
+                return 409; // Duplicate entry
             }
             else {
                 return 500; // Internal Server Error
@@ -110,7 +115,7 @@ class UserDatabase {
     }
 
     public int deleteUser(int id, String username, String email, String password) {
-        String sql = "DELETE FROM users WHERE id = ? AND username = ? AND email = ? AND password = ?";
+        String sql = "UPDATE users SET deleted = TRUE WHERE id = ? AND username = ? AND email = ? AND password = ?";
 
         try (Connection con = this.connect();
              PreparedStatement statement = con.prepareStatement(sql)) {
@@ -120,7 +125,7 @@ class UserDatabase {
             statement.setString(4, password);
             int affectedRows = statement.executeUpdate();
 
-            // User had been deleted if number of rows has changed
+            // User had been updated if any of the columns' values have changed
             if (affectedRows > 0) {
                 return 200;
             }

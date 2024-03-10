@@ -20,6 +20,7 @@ import java.util.concurrent.Executors;
  */
 public class ProductService
 {
+    static final ProductDatabase productDB = new ProductDatabase();
     /**
      * The main entry point for the ProductService application.
      * Initializes the server, sets up HTTP request handlers, and starts the server.
@@ -185,79 +186,36 @@ public class ProductService
     private static void create(HttpExchange exchange, JSONObject jsonObject) throws IOException {
         try
         {
-            //Initialize variables
-            boolean matchingID = false;
+            int id, quantity;
+            float price;
+            String name, description;
+            JSONObject responseBody = new JSONObject();
 
-            //Verify that all fields are present for creation
-            if (!(jsonObject.has("name")
-                    && jsonObject.has("description")
-                    && jsonObject.has("price")
-                    && jsonObject.has("quantity")
-                    && jsonObject.has("id")))
-            {
-                sendResponse(exchange, 400, new JSONObject().toString());
-                exchange.close();
-                return;
-            }
+            if (jsonObject.has("id") && jsonObject.has("name") && jsonObject.has("description")
+                    && jsonObject.has("price") && jsonObject.has("quantity")) {
 
-            //Verify non-negative price and quantity
-            if (jsonObject.getFloat("price") < 0 || jsonObject.getInt("quantity") < 0)
-            {
-                sendResponse(exchange, 400, new JSONObject().toString());
-                exchange.close();
-                return;
-            }
+                id = jsonObject.getInt("id");
+                name = jsonObject.getString("name");
+                description = jsonObject.getString("description");
+                price = jsonObject.getFloat("price");
+                quantity = jsonObject.getInt("quantity");
 
-            // Specify the file path where you want to create the JSON data
-            String filePath = System.getProperty("user.dir") + "/compiled/ProductService/product_database.json";
-
-            // Read our JSON file database, and fill it into a JSONArray
-            FileReader fileReader = new FileReader(filePath);
-            JSONTokener tokener = new JSONTokener(fileReader);
-            JSONArray jsonArray = new JSONArray(tokener);
-
-            //find the matching product id within our jsonArray
-            for (int i = 0; i < jsonArray.length(); i++)
-            {
-                if (jsonArray.getJSONObject(i).getInt("id") == (jsonObject.getInt("id")))
-                {
-                    matchingID = true;
+                int createStatus = productDB.createProduct(id, name, description, price, quantity);
+                if (createStatus == 200) {
+                    responseBody.put("id", id);
+                    responseBody.put("name", name);
+                    responseBody.put("description", description);
+                    responseBody.put("price", price);
+                    responseBody.put("quantity", quantity);
+                    sendResponse(exchange, createStatus, responseBody.toString());
+                } else {
+                    sendResponse(exchange, createStatus, new JSONObject().toString());
                 }
             }
-
-            if (!matchingID)
-            {
-                // Add our new json to the JSONArray
-                jsonArray.put(jsonObject);
-
-                // Write the entire JSONArray to the file
-                try (FileWriter fileWriter = new FileWriter(filePath))
-                {
-                    jsonArray.write(fileWriter);
-                }
-                catch (IOException e)
-                {
-                    e.printStackTrace();
-                }
-
-                // remove the "command" key and value before sending back the json as a response
-                // normally guaranteed to have a command, but this if-statement checks just in case
-                if (jsonObject.has("command"))
-                {
-                    jsonObject.remove("command");
-                }
-                String response = jsonObject.toString();
-
-                // Respond with status code 200 for a valid creation
-                sendResponse(exchange, 200, response);
+            // The fields provided are invalid
+            else {
+                sendResponse(exchange,400, new JSONObject().toString());
             }
-            else
-            {
-                //Respond with status code 409 if we encounter a duplicate ID
-                sendResponse(exchange, 409, new JSONObject().toString());
-            }
-            fileReader.close();
-            tokener.close();
         }
         catch (Exception e)
         {
@@ -277,94 +235,30 @@ public class ProductService
     private static void update(HttpExchange exchange, JSONObject jsonObject) throws IOException {
         try
         {
-            //Initialize variables
-            int validUpdate = -1;
+            int id, quantity;
+            float price;
+            String name, description;
 
-            // Specify the file path where you want to update the JSON data
-            String filePath = System.getProperty("user.dir") + "/compiled/ProductService/product_database.json";
+            // command and ID are the only required fields.
+            if (jsonObject.has("id")) {
+                id = jsonObject.getInt("id");
+                // Fields below are optional so provide null as the default value.
+                name = jsonObject.optString("name", null);
+                description = jsonObject.optString("description", null);
+                price = jsonObject.has("price") ? (float) jsonObject.getDouble("price") : 0;
+                quantity = jsonObject.has("quantity") ? jsonObject.getInt("quantity") : 0;
 
-            // Read our JSON file database, and fill it into a JSONArray
-            FileReader fileReader = new FileReader(filePath);
-            JSONTokener tokener = new JSONTokener(fileReader);
-            JSONArray jsonArray = new JSONArray(tokener);
-
-            //find the matching product id within our jsonArray
-            for (int i = 0; i < jsonArray.length(); i++)
-            {
-                if (jsonArray.getJSONObject(i).getInt("id") == (jsonObject.getInt("id")))
-                {
-                    // Update only the fields provided in the request
-                    if (jsonObject.has("name"))
-                    {
-                        //update it to the jsonArray
-                        jsonArray.getJSONObject(i).put("name", jsonObject.getString("name"));
-                    }
-                    if (jsonObject.has("description"))
-                    {
-                        //update it to the jsonArray
-                        jsonArray.getJSONObject(i).put("description", jsonObject.getString("description"));
-                    }
-                    if (jsonObject.has("price"))
-                    {
-                        // Verify non-negative price
-                        if (jsonObject.getFloat("price") < 0)
-                        {
-                            sendResponse(exchange, 400, new JSONObject().toString());
-                            exchange.close();
-                            return;
-                        }
-
-                        //update it to the jsonArray
-                        jsonArray.getJSONObject(i).put("price", jsonObject.getFloat("price"));
-                    }
-                    if (jsonObject.has("quantity"))
-                    {
-                        // Verify non-negative quantity
-                        if (jsonObject.getInt("quantity") < 0)
-                        {
-                            sendResponse(exchange, 400, new JSONObject().toString());
-                            exchange.close();
-                            return;
-                        }
-
-                        //update it to the jsonArray
-                        jsonArray.getJSONObject(i).put("quantity", jsonObject.getInt("quantity"));
-                    }
-                    validUpdate = i;
+                int updateStatus = productDB.updateProduct(id, name, description, price, quantity);
+                if (updateStatus == 200) {
+                    // Retrieve updated product data to include in the response.
+                    String productData = productDB.getProduct(id);
+                    sendResponse(exchange, updateStatus, new JSONObject(productData).toString());
+                } else {
+                    sendResponse(exchange, updateStatus, new JSONObject().toString());
                 }
+            } else {
+                sendResponse(exchange, 400, new JSONObject().toString());
             }
-
-            // If the update was successful
-            if (validUpdate > -1)
-            {
-                // Write the entire JSONArray to the file
-                try (FileWriter fileWriter = new FileWriter(filePath))
-                {
-                    jsonArray.write(fileWriter);
-                }
-                catch (IOException e)
-                {
-                    e.printStackTrace();
-                }
-
-                // remove the "command" key and value before sending back the json as a response
-                // normally guaranteed to have a command, but this if-statement checks just in case
-                if (jsonArray.getJSONObject(validUpdate).has("command"))
-                {
-                    jsonArray.getJSONObject(validUpdate).remove("command");
-                }
-                String response = jsonArray.getJSONObject(validUpdate).toString();
-
-                // Respond with status code 200 for a valid update
-                sendResponse(exchange, 200, response);
-            }
-            else
-            {
-                //status code 404 if product id does not exist
-                sendResponse(exchange, 404, new JSONObject().toString());
-            }
-            fileReader.close();
-            tokener.close();
         }
         catch (Exception e)
         {
@@ -383,53 +277,32 @@ public class ProductService
     private static void delete(HttpExchange exchange, JSONObject jsonObject) throws IOException {
         try
         {
-            //Initialize variables
-            boolean validDeletion = false;
+            int id, quantity;
+            float price;
+            String name, description;
+            // All the fields are required
+            if (jsonObject.has("id") && jsonObject.has("name") && jsonObject.has("description")
+                    && jsonObject.has("price") && jsonObject.has("quantity")) {
 
-            // Specify the file path where you want to delete the JSON data
-            String filePath = System.getProperty("user.dir") + "/compiled/ProductService/product_database.json";
+                id = jsonObject.getInt("id");
+                name = jsonObject.getString("name");
+                description = jsonObject.getString("description");
+                price = jsonObject.getFloat("price");
+                quantity = jsonObject.getInt("quantity");
 
-            // Read our JSON file database, and fill it into a JSONArray
-            FileReader fileReader = new FileReader(filePath);
-            JSONTokener tokener = new JSONTokener(fileReader);
-            JSONArray jsonArray = new JSONArray(tokener);
-
-            // Tolerance for float comparison
-            float epsilon = 1e-6f;
-
-            //find the matching product id within our jsonArray
-            for (int i = 0; i < jsonArray.length(); i++)
-            {
-                if (jsonArray.getJSONObject(i).getInt("id") == (jsonObject.getInt("id"))
-                        && jsonArray.getJSONObject(i).get("name").equals(jsonObject.get("name"))
-                        && jsonArray.getJSONObject(i).getInt("quantity") == jsonObject.getInt("quantity")
-                        && Math.abs(jsonArray.getJSONObject(i).getFloat("price") - jsonObject.getFloat("price")) < epsilon)
-                {
-                    jsonArray.remove(i);
-                    validDeletion = true;
+                int deleteStatus = productDB.deleteProduct(id, name, description, price, quantity);
+                // The deletion is valid, and return empty response with status code 200.
+                if (deleteStatus == 200) {
+                    sendResponse(exchange, deleteStatus, new JSONObject().toString());
+                }
+                else {
+                    sendResponse(exchange, deleteStatus, new JSONObject().toString());
                 }
             }
-
-            if (validDeletion)
-            {
-                // Write the entire JSONArray to the file
-                try (FileWriter fileWriter = new FileWriter(filePath))
-                {
-                    jsonArray.write(fileWriter);
-                }
-                catch (IOException e) {
-                    e.printStackTrace();
-                }
-
-                sendResponse(exchange, 200, "");
-            }
-            else
-            {
-                //status code 400 if product id does not exist
+            // The fields provided are invalid
+            else {
                 sendResponse(exchange, 400, new JSONObject().toString());
             }
-            fileReader.close();
-            tokener.close();
         }
         catch (Exception e)
         {
@@ -575,57 +448,20 @@ public class ProductService
         @Override
         public void handle(HttpExchange exchange) throws IOException
         {
-            try
-            {
-                // Handle GET request for /product
-                if ("GET".equals(exchange.getRequestMethod()))
-                {
-                    //Initialize variables
-                    String URI = exchange.getRequestURI().toString();
-                    int productID = Integer.parseInt(URI.substring(9));
-                    String response = "";
-                    boolean validSearch = false;
-
-                    // Specify the file path where you want to search the JSON data
-                    String filePath = System.getProperty("user.dir") + "/compiled/ProductService/product_database.json";
-
-                    // Read our JSON file database, and fill it into a JSONArray
-                    FileReader fileReader = new FileReader(filePath);
-                    JSONTokener tokener = new JSONTokener(fileReader);
-                    JSONArray jsonArray = new JSONArray(tokener);
-
-                    //find the matching product id within our jsonArray
-                    for (int i = 0; i < jsonArray.length(); i++)
-                    {
-                        if (jsonArray.getJSONObject(i).getInt("id") == productID)
-                        {
-                            // remove the "command" key and value before sending back the json as a response
-                            // normally guaranteed to have a command, but this if-statement checks just in case
-                            if (jsonArray.getJSONObject(i).has("command"))
-                            {
-                                jsonArray.getJSONObject(i).remove("command");
-                            }
-                            response = jsonArray.getJSONObject(i).toString();
-                            validSearch = true;
-                        }
-                    }
-
-                    if (validSearch)
-                    {
-                        sendResponse(exchange, 200, response);
-                    }
-                    else
-                    {
-                        //status code 404 id does not exist
-                        sendResponse(exchange, 404, new JSONObject().toString());
-                    }
-                    fileReader.close();
-                    tokener.close();
-                }
-                else
-                {
-                    //status code 405 for non Get Requests
-                    sendResponse(exchange, 405, new JSONObject().toString());
+            String path = exchange.getRequestURI().getPath();
+            String[] pathParts = path.split("/");
+            if (pathParts.length != 3 || !pathParts[1].equals("product")) {
+                sendResponse(exchange, 400, new JSONObject().toString());
+                return;
+            }
+            try {
+                int productId = Integer.parseInt(pathParts[2]);
+                String productData = productDB.getProduct(productId);
+                if (productData.isEmpty()) {
+                    sendResponse(exchange, 404, new JSONObject().toString());
+                } else {
+                    // Valid response, which returns product's data: id, name, description, price, quantity
+                    sendResponse(exchange, 200, new JSONObject(productData).toString());
                 }
             }
             catch (Exception e)
