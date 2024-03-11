@@ -7,8 +7,7 @@ This module works as a load balancer and a request forwarder for the
 User, Product and Order systems.
 
 Usage:
-./iscs.py <order_service_port> <base_product_service_port>
-          <num_product_services> <base_user_service_port> <num_user_services>
+./iscs.py [port] [-d]
 '''
 
 import sys
