@@ -19,6 +19,7 @@ import org.json.*;
  */
 public class OrderService
 {
+    static final OrderDatabase orderDB = new OrderDatabase();
     /**
      * The main method starts the server that is used to handle orders, and sets up the current working directory.
      *
@@ -419,41 +420,52 @@ public class OrderService
                     //Initialize variables
                     String URI = exchange.getRequestURI().toString();
                     int userID = Integer.parseInt(URI.substring(16));
-                    String response = "";
-                    boolean validSearch = false;
 
-                    // Specify the file path where you want to search the JSON data
-                    String filePath = System.getProperty("user.dir") + "/compiled/UserService/user_database.json";
-
-                    // Read our JSON file database, and fill it into a JSONArray
-                    FileReader fileReader = new FileReader(filePath);
-                    JSONTokener tokener = new JSONTokener(fileReader);
-                    JSONArray jsonArray = new JSONArray(tokener);
-
-                    //find the matching user id within our jsonArray
-                    for (int i = 0; i < jsonArray.length(); i++)
-                    {
-                        if (jsonArray.getJSONObject(i).getInt("id") == (userID))
-                        {
-                            response = jsonArray.getJSONObject(i).get("orders").toString();
-                            validSearch = true;
-                        }
-                    }
-
-                    if (validSearch)
-                    {
-                        sendResponse(exchange, 200, response);
-                    }
-                    else
-                    {
-                        //status code 404 id does not exist
+                    String response = orderDB.getPurchased(userID);
+                    
+                    if (response.equals("}")) {
                         sendResponse(exchange, 404, new JSONObject().toString());
                     }
-                    fileReader.close();
-                    tokener.close();
+                    else {
+                        sendResponse(exchange, 200, response);
+                    }
+
+                //     // Specify the file path where you want to search the JSON data
+                //     String filePath = System.getProperty("user.dir") + "/compiled/UserService/user_database.json";
+
+                //     // Read our JSON file database, and fill it into a JSONArray
+                //     FileReader fileReader = new FileReader(filePath);
+                //     JSONTokener tokener = new JSONTokener(fileReader);
+                //     JSONArray jsonArray = new JSONArray(tokener);
+
+                //     //find the matching user id within our jsonArray
+                //     for (int i = 0; i < jsonArray.length(); i++)
+                //     {
+                //         if (jsonArray.getJSONObject(i).getInt("id") == (userID))
+                //         {
+                //             response = jsonArray.getJSONObject(i).get("orders").toString();
+                //             validSearch = true;
+                //         }
+                //     }
+
+                //     if (validSearch)
+                //     {
+                //         sendResponse(exchange, 200, response);
+                //     }
+                //     else
+                //     {
+                //         //status code 404 id does not exist
+                //         sendResponse(exchange, 404, new JSONObject().toString());
+                //     }
+                //     fileReader.close();
+                //     tokener.close();
+                // }
+                // else
+                // {
+                //     //status code 405 for non Get Requests
+                //     sendResponse(exchange, 405, new JSONObject().toString());
                 }
-                else
-                {
+                else {
                     //status code 405 for non Get Requests
                     sendResponse(exchange, 405, new JSONObject().toString());
                 }
