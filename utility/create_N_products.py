@@ -1,6 +1,6 @@
 '''
-create_N_users.py
-This script is used to create N users in the system.
+create_N_products.py
+This script is used to create N products in the system.
 '''
 
 import sys
@@ -8,40 +8,41 @@ import time
 import requests
 
 # Defaults
-# URL to create user
-URL = "http://localhost:8069"
-# Endpoint to create user
-ENDPOINT = "/user"
-# Number of users to create
+# URL to create product
+URL = "http://localhost:8065"
+# Endpoint to create product
+ENDPOINT = "/product"
+# Number of products to create
 N = 10
 # Headers
 HEADERS = {"Content-Type": "application/json"}
 
-def create_n_users(url, n):
+def create_n_products(url, n):
     """
-    Create N users in the system. Print out the total time taken to create N users.
-    :param url: URL to send POST request to create user.
-    :param n: Number of users to create.
+    Create N products in the system. Print out the total time taken to create N users.
+    :param url: URL to send POST request to create product.
+    :param n: Number of products to create.
     """
 
     return_code = 0
 
-    # Create N users
+    # Create N products
     start_time = time.time()
     for i in range(n):
-        # User data
-        user_data = {
+        # Product data
+        product_data = {
             "command": "create",
-            "id": str(i),
-            "username": f"user_{i}",
-            "email": f"user_{i}@mail.com",
-            "password": f"password_{i}"
+            "id": i,
+            "name": f"product_{i}",
+            "description": f"description_{i}",
+            "price": i*10.0, # Must be a float
+            "quantity": i*10 # Must be an integer
         }
-        # Send POST request to create user
+        # Send POST request to create product
         # Stop the process if there is an error that prevents the rest of the
-        # users from being created
+        # products from being created
         try:
-            response = requests.post(url, json=user_data, headers=HEADERS, timeout=5)
+            response = requests.post(url, json=product_data, headers=HEADERS, timeout=5)
             response.raise_for_status()
         except requests.exceptions.ConnectionError as e:
             print("Connection error:", e, file=sys.stderr)
@@ -66,26 +67,26 @@ def create_n_users(url, n):
 
         # Print response if unsuccessful
         if response.status_code != 200:
-            print("Non 200 response creating user:", i, \
+            print("Non 200 response creating product:", i, \
                     response.status_code, response.text, file=sys.stderr)
 
 
     end_time = time.time()
     if return_code == 0:
-        print(f"{n} users created in {end_time - start_time:.2f} seconds")
+        print(f"{n} products created in {end_time - start_time:.2f} seconds")
     else:
-        print(f"Failed to create {n} users")
+        print(f"Failed to create {n} products")
     return return_code
 def _usage():
     """
     Print usage information.
     """
-    print("Usage: python3 create_N_users.py [URL] [N]", file=sys.stderr)
+    print("Usage: python3 create_N_products.py [URL] [N]", file=sys.stderr)
     sys.exit(1)
 
 def main():
     """
-    Main function to create N users in the system.
+    Main function to create N products in the system.
     """
     # Read in command line arguments
     global URL, N
@@ -94,17 +95,17 @@ def main():
             # Use default values
             pass
         case 2:
-            # Use custom number of users or custom URL
+            # Use custom number of products or custom URL
             try:
                 N = int(sys.argv[1])
             except ValueError:
                 URL = sys.argv[1]
         case 3:
-            # Use custom URL and number of users
+            # Use custom URL and number of products
             try:
                 N = int(sys.argv[2])
             except ValueError:
-                print("Invalid number of users", file=sys.stderr)
+                print("Invalid number of products", file=sys.stderr)
                 _usage()
                 sys.exit(1)
             URL = sys.argv[1]
@@ -113,8 +114,8 @@ def main():
             _usage()
             sys.exit(1)
 
-    # Create N users
-    sys.exit(create_n_users(URL+ENDPOINT, N))
+    # Create N products
+    sys.exit(create_n_products(URL+ENDPOINT, N))
 
 if __name__ == "__main__":
     main()
