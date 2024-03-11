@@ -48,7 +48,6 @@ class OrderDatabase {
                     "user_id INT NOT NULL, " +
                     "prod_id INT NOT NULL, " +
                     "quantity INT NOT NULL CHECK (quantity > 0), " +
-                    "deleted BOOLEAN NOT NULL DEFAULT FALSE, " +
                     "FOREIGN KEY (user_id) REFERENCES users(id) " +
                     "ON DELETE CASCADE, " +
                     "FOREIGN KEY (prod_id) REFERENCES products(id) " +
@@ -62,20 +61,18 @@ class OrderDatabase {
 
     /**
      * Creates a new user in the database.
-     * @param id is the ID of the user.
      * @param user_id is the ID of the user making the order.
      * @param prod_id is the ID of the product being bought.
      * @param quantity is the quantity of the bought product.
      * @return An HTTP status code representing the result of the operation.
      */
-    public int placeOrder(int id, int user_id, int prod_id, int quantity) {
-        String sql = "INSERT INTO orders(id, user_id, prod_id, quantity) VALUES(?, ?, ?, ?)";
+    public int placeOrder(int user_id, int prod_id, int quantity) {
+        String sql = "INSERT INTO orders(user_id, prod_id, quantity) VALUES(?, ?, ?)";
         try (Connection con = this.connect();
              PreparedStatement statement = con.prepareStatement(sql)) {
-            statement.setInt(1, id);
-            statement.setInt(2, user_id);
-            statement.setInt(3, prod_id);
-            statement.setInt(4, quantity);
+            statement.setInt(1, user_id);
+            statement.setInt(2, prod_id);
+            statement.setInt(3, quantity);
             statement.executeUpdate();
             return 200; // OK - User created successfully
         }
@@ -117,6 +114,61 @@ class OrderDatabase {
         catch (SQLException e) {
             return String.format("{\"error_message\": \"Get Order for user_id %d Did Not Work\"}", user_id);
         }
+    }
+
+    /**
+     * Retrieves a user's information from the database based on the user ID.
+     * @param id is the ID of the user to retrieve.
+     * @return A JSON string containing the user's information, or an empty string if not found.
+     */
+    public String getUser(int id) {
+        String sql = "SELECT id, username, email, password FROM users WHERE id = ?";
+        try (Connection con = this.connect();
+             PreparedStatement statement = con.prepareStatement(sql)) {
+            statement.setInt(1, id);
+            ResultSet current = statement.executeQuery();
+            if (current.next()) {
+                int userId = current.getInt("id");
+                String username = current.getString("username");
+                String email = current.getString("email");
+                String encryptedPassword = hashPassword(current.getString("password"));
+                return String.format("{\"id\": %d, \"username\": \"%s\"," +
+                        " \"email\": \"%s\", \"password\": \"%s\"}", userId, username, email, encryptedPassword);
+            }
+        }
+        catch (SQLException e) {
+            return "";
+        }
+        return "";
+    }
+
+    /**
+     * Retrieves a user's information from the database based on the user ID.
+     *
+     * @param id is the ID of the user to retrieve.
+     * @return A JSON string containing the user's information, or an empty string if not found.
+     */
+    public String getProduct(int id) {
+        String sql = "SELECT id, name, description, price, quantity FROM products WHERE id = ?"; // Make sure the table name is 'products' not 'users'
+        try (Connection con = this.connect();
+             PreparedStatement statement = con.prepareStatement(sql)) {
+            statement.setInt(1, id);
+            ResultSet current = statement.executeQuery();
+            if (current.next()) {
+                int productId = current.getInt("id");
+                String name = current.getString("name");
+                String description = current.getString("description");
+                float price = current.getFloat("price"); // Use getFloat for price
+                int quantity = current.getInt("quantity"); // Use getInt for quantity
+                return String.format("{\"id\": %d, \"name\": \"%s\"," +
+                                " \"description\": \"%s\", \"price\": %.2f, \"quantity\": %d}\n", productId, name, description,
+                        price, quantity);
+            }
+        }
+        catch (SQLException e) {
+            return "";
+        }
+        return "";
     }
 
     public int deleteUser(int id, String username, String email, String password) {
