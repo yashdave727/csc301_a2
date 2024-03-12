@@ -31,24 +31,13 @@ public class ProductService
      */
     public static void main(String[] args) throws IOException
     {
-        // Change the working directory to the a1 folder
+        String ip = "127.0.0.1";
+        int port = -1;
+
+        // Get port from the command line
         if (args.length > 0)
         {
-            // Take the absolute working directory from the commmand line
-            String directoryPath = args[0];
-            File directory = new File(directoryPath);
-
-            // Check if the directory exists before attempting to change to it
-            if (directory.exists() && directory.isDirectory())
-            {
-                // Change the current working directory
-                System.setProperty("user.dir", directory.getAbsolutePath());
-            }
-            else
-            {
-                System.out.println("The working directory does not exist.");
-                System.exit(1);
-            }
+            port = Integer.parseInt(args[0]);
         }
         else
         {
@@ -56,56 +45,7 @@ public class ProductService
             System.exit(1);
         }
 
-        // Initialize filepaths
-        String backupFilePath = System.getProperty("user.dir") + "/compiled/ProductService/product_backup.json";
-        String filePath = System.getProperty("user.dir") + "/compiled/ProductService/product_database.json";
 
-        // Relay data to the backup database (if the most recent command was shutdown)
-        try
-        {
-            // Read our database, and fill it into a JSONArray
-            FileReader fileReader = new FileReader(filePath);
-            JSONTokener tokener = new JSONTokener(fileReader);
-            JSONArray jsonArray = new JSONArray(tokener);
-
-            // Check if a shutdown request has been received within the database files
-            for (int i = 0; i < jsonArray.length(); i++)
-            {
-                if (jsonArray.getJSONObject(i).get("command").equals("shutdown"))
-                {
-                    // Write the JSON array to the backup file
-                    try (FileWriter fileWriter = new FileWriter(backupFilePath)) {
-                        fileWriter.write(jsonArray.toString());
-                    }
-                }
-            }
-            fileReader.close();
-            tokener.close();
-        }
-        catch (IOException e) {
-            e.printStackTrace();
-            System.err.println("Error creating product backup.");
-        }
-
-
-        // Reset product database
-        try {
-            // Clear product_database.json
-            FileWriter fileWriter = new FileWriter(filePath);
-            fileWriter.write("[]");
-            fileWriter.close();
-
-        }
-
-        catch (IOException e)
-        {
-            e.printStackTrace();
-            System.err.println("Error clearing ProductService.json");
-        }
-
-
-        int port = Integer.parseInt(getIPorPORT("PORT", 'P'));
-        String ip = getIPorPORT("IP", 'P');
         HttpServer server = HttpServer.create(new InetSocketAddress(ip, port), 0);
         // Example: Set a custom executor with a fixed-size thread pool
         server.setExecutor(Executors.newFixedThreadPool(20)); // Adjust the pool size as needed
@@ -157,10 +97,6 @@ public class ProductService
                             update(exchange, jsonObject); break;
                         case "delete":
                             delete(exchange, jsonObject); break;
-                        case "restart":
-                            restart(exchange, jsonObject); break;
-                        case "shutdown":
-                            shutdown(exchange, jsonObject); break;
                         default:
                             sendResponse(exchange, 400, new JSONObject().toString()); break;
                     }
@@ -312,128 +248,6 @@ public class ProductService
     }
 
     /**
-     * Handles the restart operation by reading data from the backup file and restoring it to the main database.
-     *
-     * @param exchange The HttpExchange object representing the HTTP request and response.
-     * @param jsonObject The JSON data containing information about the restart operation.
-     * @throws IOException If an I/O error occurs while handling the request.
-     */
-    private static void restart(HttpExchange exchange, JSONObject jsonObject) throws IOException
-    {
-        //Initialize variables
-        String backupFilePath = System.getProperty("user.dir") + "/compiled/ProductService/product_backup.json";
-        String filePath = System.getProperty("user.dir") + "/compiled/ProductService/product_database.json";
-        boolean validRestart = false;
-
-        try
-        {
-            // Read our backup database, and fill it into a JSONArray
-            FileReader fileReader = new FileReader(backupFilePath);
-            JSONTokener tokener = new JSONTokener(fileReader);
-            JSONArray jsonArray = new JSONArray(tokener);
-
-            // Check if a shutdown request has been received within the backup files
-            for (int i = 0; i < jsonArray.length(); i++)
-            {
-                if (jsonArray.getJSONObject(i).get("command").equals("shutdown"))
-                {
-                    try (FileWriter fileWriter = new FileWriter(filePath))
-                    {
-                        // remove the shutdown command
-                        jsonArray.remove(i);
-
-                        // reboot the old data from the backup file
-                        fileWriter.write(jsonArray.toString());
-
-                        // Reset our backup database
-                        try (FileWriter fileWriter2 = new FileWriter(backupFilePath))
-                        {
-                            fileWriter2.write("[]");
-                        }
-                        catch (IOException e)
-                        {
-                            e.printStackTrace();
-                        }
-
-                        sendResponse(exchange, 200, jsonObject.toString());
-                        validRestart = true;
-                    }
-                    catch (Exception e)
-                    {
-                        System.out.println("Error writing to " + filePath);
-                        sendResponse(exchange, 400, new JSONObject().toString());
-                    }
-                }
-            }
-
-            if(!validRestart)
-            {
-                // Trying to restart without any previous shutdown data results in an error
-                sendResponse(exchange, 400, new JSONObject().toString());
-            }
-
-            fileReader.close();
-            tokener.close();
-        }
-        catch (Exception e)
-        {
-            e.printStackTrace();
-            //If any weird error occurs, then ProductService has received a bad http request
-            sendResponse(exchange, 400, new JSONObject().toString());
-        }
-
-        exchange.close();
-    }
-
-    /**
-     * Handles the shutdown operation by adding the provided JSON data to the backup file.
-     * Exits the application after completing the shutdown process.
-     *
-     * @param exchange The HttpExchange object representing the HTTP request and response.
-     * @param jsonObject The JSON data containing information about the shutdown operation.
-     * @throws IOException If an I/O error occurs while handling the request.
-     */
-    private static void shutdown(HttpExchange exchange, JSONObject jsonObject) throws IOException{
-        try
-        {
-            // Send shutdown command to the backup file
-            String filePath = System.getProperty("user.dir") + "/compiled/ProductService/product_database.json";
-
-            // Read our JSON file database, and fill it into a JSONArray
-            FileReader fileReader = new FileReader(filePath);
-            JSONTokener tokener = new JSONTokener(fileReader);
-            JSONArray jsonArray = new JSONArray(tokener);
-
-            // Add our new json to the JSONArray
-            jsonArray.put(jsonObject);
-
-            // Write the entire JSONArray to the file
-            try (FileWriter fileWriter = new FileWriter(filePath))
-            {
-                jsonArray.write(fileWriter);
-            }
-            catch (IOException e)
-            {
-                e.printStackTrace();
-            }
-
-            String response = jsonObject.toString();
-
-            // Respond with status code 200 for a valid creation
-            sendResponse(exchange, 200, response);
-
-            fileReader.close();
-            tokener.close();
-            System.exit(0);
-        }
-        catch (Exception e)
-        {
-            //If any weird error occurs, then ProductService has received a bad http request
-            sendResponse(exchange, 400, new JSONObject().toString());
-        }
-    }
-
-    /**
      * Handles GET requests for product information, specifically retrieving details based on product ID.
      * This class is responsible for processing GET requests to the /product endpoint.
      */
@@ -508,59 +322,5 @@ public class ProductService
             }
             return requestBody.toString();
         }
-    }
-
-    /**
-     * Retrieves the IP address or port number from the configuration file based on the specified type.
-     *
-     * @param IPorPORT Specifies whether to retrieve the IP address ("IP") or port number ("PORT").
-     * @param UPO Indicates the type of service ('U' for UserService, 'P' for ProductService, 'O' for OrderService).
-     * @return The IP address or port number as a String.
-     */
-    public static String getIPorPORT(String IPorPORT, char UPO){
-
-        try {
-
-            // Get the current directory
-            String currentDirectory = System.getProperty("user.dir");
-
-            // Navigate to the parent directory twice
-            Path parentDirectory = Paths.get(currentDirectory);
-
-            // Specify the path to the config.json file
-            Path configFilePath = parentDirectory.resolve("config.json");
-
-            // Read the content of the config.json file into a string
-            String content = new String(Files.readAllBytes(configFilePath));
-
-            // Parse the string into a JSONObject
-            JSONObject jsonObject = new JSONObject(content);
-
-            if (UPO == 'U'){
-                JSONObject US = jsonObject.getJSONObject("UserService");
-                if (IPorPORT.equals("IP")){
-                    return US.getString("ip");
-                } else {
-                    return Integer.toString(US.getInt("port"));
-                }
-            } else if (UPO == 'P'){
-                JSONObject PS = jsonObject.getJSONObject("ProductService");
-                if (IPorPORT.equals("IP")){
-                    return PS.getString("ip");
-                } else {
-                    return Integer.toString(PS.getInt("port"));
-                }
-            } else if (UPO == 'O'){
-                JSONObject OS = jsonObject.getJSONObject("OrderService");
-                if (IPorPORT.equals("IP")){
-                    return OS.getString("ip");
-                } else {
-                    return Integer.toString(OS.getInt("port"));
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return "";
     }
 }

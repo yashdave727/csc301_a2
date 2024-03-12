@@ -1,17 +1,18 @@
-import com.sun.net.httpserver.HttpServer;
-import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpHandler;
+import com.sun.net.httpserver.HttpServer;
+import org.json.JSONObject;
 
-import java.io.*;
-import java.net.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.concurrent.Executors;
-
-import org.json.*;
 
 /**
  * This is the microservice that handles HTTP requests related to orders and returns a response back to the client.
@@ -27,24 +28,16 @@ public class OrderService
      */
     public static void main(String[] args) throws IOException
     {
-        // Change the working directory to the a1 folder
-        if (args.length > 0)
-        {
-            // Take the absolute working directory from the commmand line
-            String directoryPath = args[0];
-            File directory = new File(directoryPath);
+        String ip = "127.0.0.1";
+        int port = -1;
+        String ISCS_IP = "";
 
-            // Check if the directory exists before attempting to change to it
-            if (directory.exists() && directory.isDirectory())
-            {
-                // Change the current working directory
-                System.setProperty("user.dir", directory.getAbsolutePath());
-            }
-            else
-            {
-                System.out.println("The working directory does not exist.");
-                System.exit(1);
-            }
+        // Get Port and ISCS_IP from the command line
+        if (args.length > 1)
+        {
+            ISCS_IP = args[1];
+            port = Integer.parseInt(args[0]);
+            ip = "127.0.0.1";
         }
         else
         {
@@ -52,8 +45,6 @@ public class OrderService
             System.exit(1);
         }
 
-        int port = Integer.parseInt(OrderService.getIPorPORT("PORT", 'O'));
-        String ip = OrderService.getIPorPORT("IP", 'O');
         HttpServer server = HttpServer.create(new InetSocketAddress(ip, port), 0);
 
         // Example: Set a custom executor with a fixed-size thread pool
@@ -61,9 +52,8 @@ public class OrderService
 
         // Set up context for a POST request to the OrderService
         server.createContext("/order", new OrderHandler());
-        server.createContext("/user", new UserHandler());
-        server.createContext("/product", new ProductHandler());
-        server.createContext("/database", new DatabaseHandler());
+        server.createContext("/user", new UserHandler(ISCS_IP));
+        server.createContext("/product", new ProductHandler(ISCS_IP));
 
         // Set up context for a Get request to the OrderService
         server.createContext("/user/purchased/", new PurchaseHandler());
@@ -94,18 +84,12 @@ public class OrderService
         {
             try
             {
-                // Handle POST request for /create
+                // Handle POST request for /order
                 if ("POST".equals(exchange.getRequestMethod()))
                 {
                     //Initialize variables
                     String orderData = OrderService.getRequestBody(exchange);
                     JSONObject jsonObject = new JSONObject(orderData);
-
-                    String userPath = System.getProperty("user.dir") + "/compiled/UserService/user_database.json";
-                    String productPath = System.getProperty("user.dir") + "/compiled/ProductService/product_database.json";
-
-                    boolean validUser = false;
-                    int rCode = 400;
                     String status_message = "Invalid Request";
 
                     //Verify that all fields are present for creation
@@ -124,13 +108,13 @@ public class OrderService
 
                     if (orderDB.getUser(userID).equals("") || orderDB.getProduct(prodID).equals("")) {
                         // Send a 405 Method Not Allowed response for non-POST requests
-                        sendResponse(exchange, 405, "{\"status\": \"Invalid Request user/product not found\"}");
+                        sendResponse(exchange, 405, "{\"status\": \"Invalid Request\"}");
                     }
 
                     JSONObject product = new JSONObject(orderDB.getProduct(prodID));
                     if (product.getInt("quantity") - quantity < 0) {
                         // Send a 405 Method Not Allowed response for non-POST requests
-                        sendResponse(exchange, 405, "{\"status\": \"Invalid Request for quantity\"}");
+                        sendResponse(exchange, 405, "{\"status\": \"Exceeded quantity limit\"}");
                     }
 
                     int statusCode = orderDB.placeOrder(userID, prodID, quantity);
@@ -139,114 +123,7 @@ public class OrderService
                     jsonResponse.put("status", status_message);
                     String response = jsonObject.toString();
                     sendResponse(exchange, statusCode, response);
-
-                    // //Read our user database, and fill it into a JSONArray
-                    // FileReader userFileReader = new FileReader(userPath);
-                    // JSONTokener userTokener = new JSONTokener(userFileReader);
-                    // JSONArray user_jsonArray = new JSONArray(userTokener);
-
-                    // //Verify that a valid user_id exists in the user database
-                    // for (int i = 0; i < user_jsonArray.length(); i++)
-                    // {
-                    //     if (user_jsonArray.getJSONObject(i).getInt("id") == jsonObject.getInt("user_id"))
-                    //     {
-                    //         validUser = true;
-                    //     }
-                    // }
-
-                    // //Read our product database, and fill it into a JSONArray
-                    // FileReader productFileReader = new FileReader(productPath);
-                    // JSONTokener productTokener = new JSONTokener(productFileReader);
-                    // JSONArray product_jsonArray = new JSONArray(productTokener);
-
-                    // if (validUser)
-                    // {
-                    //     //Verify that a valid product_id exists in the product database
-                    //     for (int i = 0; i < product_jsonArray.length(); i++)
-                    //     {
-                    //         if (product_jsonArray.getJSONObject(i).getInt("id") == (jsonObject.getInt("product_id")))
-                    //         {
-                    //             //make sure the updated quantity (post order) can't go below zero
-                    //             int updated_quantity = product_jsonArray.getJSONObject(i).getInt("quantity") - jsonObject.getInt("quantity");
-                    //             if (updated_quantity >= 0)
-                    //             {
-                    //                 //update quantity in product database
-                    //                 product_jsonArray.getJSONObject(i).put("quantity", String.valueOf(updated_quantity));
-                    //                 status_message = "Success";
-                    //                 rCode = 200;
-
-                    //                 // Write the entire JSONArray to the file
-                    //                 try (FileWriter fileWriter = new FileWriter(productPath))
-                    //                 {
-                    //                     product_jsonArray.write(fileWriter);
-                    //                 }
-                    //                 catch (IOException e)
-                    //                 {
-                    //                     e.printStackTrace();
-                    //                 }
-
-
-
-                    //                 // Iterate to the user who ordered the product and update order info in User Database
-                    //                 for (int j = 0; j < user_jsonArray.length(); j++)
-                    //                 {
-                    //                     if (user_jsonArray.getJSONObject(j).getInt("id") == (jsonObject.getInt("user_id")))
-                    //                     {
-                    //                         JSONObject ordersJSON = user_jsonArray.getJSONObject(j).getJSONObject("orders");
-
-                    //                         // if user has already bought this product then accumulate its quantity with the existing quantity
-                    //                         if (ordersJSON.has(String.valueOf(jsonObject.getInt("product_id"))))
-                    //                         {
-                    //                             int current_quantity = ordersJSON.getInt(String.valueOf(jsonObject.getInt("product_id")));
-                    //                             int num_purchased = jsonObject.getInt("quantity");
-                    //                             int accumulated_quantity = current_quantity + num_purchased;
-                    //                             ordersJSON.put(String.valueOf(jsonObject.getInt("product_id")), accumulated_quantity);
-                    //                         }
-                    //                         // otherwise create a new product_id key and add it to the ordersJSON in format {product_id, quantity}
-                    //                         else
-                    //                         {
-                    //                             ordersJSON.put(String.valueOf(jsonObject.getInt("product_id")), jsonObject.getInt("quantity"));
-                    //                         }
-
-                    //                         user_jsonArray.getJSONObject(j).put("orders", ordersJSON);
-
-
-                    //                         // Write the entire User's JSONArray to the file
-                    //                         try (FileWriter fileWriter = new FileWriter(userPath))
-                    //                         {
-                    //                             user_jsonArray.write(fileWriter);
-                    //                         }
-                    //                         catch (IOException e)
-                    //                         {
-                    //                             e.printStackTrace();
-                    //                         }
-                    //                     }
-                    //                 }
-                    //             }
-                    //             else
-                    //             {
-                    //                 status_message = "Exceeded quantity limit";
-                    //                 rCode = 400;
-                    //             }
-                    //         }
-                    //     }
-                    // }
-
-                    // //add status message and send response
-                    // jsonObject.put("status", status_message);
-                    // String response = jsonObject.toString();
-                    // sendResponse(exchange, rCode, response);
-
-                    // userFileReader.close();
-                    // userTokener.close();
-                    // productFileReader.close();
-                    // productTokener.close();
                 }
-                // else
-                // {
-                //     // Send a 405 Method Not Allowed response for non-POST requests
-                //     sendResponse(exchange, 405, "{\"status\": \"Invalid Request\"}");
-                // }
             }
             catch (Exception e)
             {
@@ -264,6 +141,14 @@ public class OrderService
      */
     static class UserHandler implements HttpHandler
     {
+
+        String uri;
+
+        public UserHandler(String s)
+        {
+            this.uri = s;
+        }
+
         /**
          * Handles the incoming HTTP exchange, processing requests related to user management.
          *
@@ -276,9 +161,9 @@ public class OrderService
             try
             {
                 // Initialize variables
-                String url = "http://" + getIPorPORT("IP", 'U') + ":" + getIPorPORT("PORT", 'U');
-                String endpoint;
-                String data = getRequestBody(exchange);
+                String url = this.uri;
+                String endpoint = "";
+                String data = "";
 
                 // Create a parsable JSONObject from our response body's string
                 JSONObject jsonObject = new JSONObject(data);
@@ -286,18 +171,28 @@ public class OrderService
                 // Parse the command
                 String command = jsonObject.getString("command");
 
-                switch (command)
+                switch (exchange.getRequestMethod())
                 {
-                    case "create": case "delete": case "update":
+                    case "POST":
                         endpoint = "/user";
+                        command = "post";
+                        data = getRequestBody(exchange);
                         break;
-                    case "get":
-                        endpoint = "/user/"+jsonObject.getInt("id");
+                    case "GET":
+                        String path = exchange.getRequestURI().getPath();
+                        String[] pathParts = path.split("/");
+                        if (pathParts.length != 3)
+                        {
+                            // Bad request
+                            sendResponse(exchange, 400, new JSONObject().toString());
+                            return;
+                        }
+
+                        endpoint = "/user/"+pathParts[2];
+                        command = "get";
                         break;
                     default:
-                    {
-                        sendResponse(exchange, 400, new JSONObject().toString()); return;
-                    }
+                        sendResponse(exchange, 400, new JSONObject().toString());
                 }
 
                 // Send an HTTP Request to another server, collect the response
@@ -322,6 +217,13 @@ public class OrderService
      */
     static class ProductHandler implements HttpHandler
     {
+        String uri;
+
+        public ProductHandler(String s)
+        {
+            this.uri = s;
+        }
+
         /**
          * Handles the incoming HTTP exchange, processing requests related to product management.
          *
@@ -334,9 +236,9 @@ public class OrderService
             try
             {
                 // Initialize variables
-                String url = "http://" + getIPorPORT("IP", 'P') + ":" + getIPorPORT("PORT", 'P');
+                String url = this.uri;
                 String endpoint = "";
-                String data = getRequestBody(exchange);
+                String data = "";
 
                 // Create a parsable JSONObject from our response body's string
                 JSONObject jsonObject = new JSONObject(data);
@@ -344,13 +246,25 @@ public class OrderService
                 // Parse the command
                 String command = jsonObject.getString("command");
 
-                switch (command)
+                switch (exchange.getRequestMethod())
                 {
-                    case "create": case "update": case "delete":
+                    case "POST":
                             endpoint = "/product";
+                            command = "post";
+                            data = getRequestBody(exchange);
                             break;
-                    case "info":
-                            endpoint = "/product/"+jsonObject.getInt("id");
+                    case "GET":
+                            String path = exchange.getRequestURI().getPath();
+                            String[] pathParts = path.split("/");
+                            if (pathParts.length != 3)
+                            {
+                                // Bad request
+                                sendResponse(exchange, 400, new JSONObject().toString());
+                                return;
+                            }
+
+                            endpoint = "/product/"+pathParts[2];
+                            command = "get";
                             break;
                     default:
                             sendResponse(exchange, 400, new JSONObject().toString());
@@ -365,63 +279,6 @@ public class OrderService
             catch (Exception e)
             {
                 //If we get a weird error, it's a bad HTTP request
-                sendResponse(exchange, 400, new JSONObject().toString());
-            }
-            exchange.close();
-        }
-    }
-
-
-    /**
-     * A custom HTTP handler for processing database-related commands.
-     * Implements the HttpHandler interface to handle HTTP exchanges.
-     * This class is responsible for handling commands such as shutdown and restart, affecting both user and product services.
-     */
-    static class DatabaseHandler implements HttpHandler
-    {
-        /**
-         * Handles the incoming HTTP exchange, processing database-related commands.
-         *
-         * @param exchange The HttpExchange object representing the HTTP request and response.
-         * @throws IOException If an I/O error occurs while handling the request.
-         */
-        @Override
-        public void handle(HttpExchange exchange) throws IOException
-        {
-            try
-            {
-                // Initialize variables
-                String urlUser = "http://" + getIPorPORT("IP", 'U') + ":" + getIPorPORT("PORT", 'U') + "/user";
-                String urlProduct = "http://" + getIPorPORT("IP", 'P') + ":" + getIPorPORT("PORT", 'P') + "/product";
-                String data = getRequestBody(exchange);
-
-                // Create a parsable JSONObject from our response body's string
-                JSONObject jsonObject = new JSONObject(data);
-
-                // Parse the command
-                String command = jsonObject.getString("command");
-
-                switch (command)
-                {
-                    case "shutdown":
-                    case "restart":
-                    {
-                        ResponseTuple order = OrderService.sendHTTPRequest(urlUser, data, command);
-                        ResponseTuple user = OrderService.sendHTTPRequest(urlProduct, data, command);
-
-                        if (order.getStatus_code() == 200 && user.getStatus_code() == 200)
-                            sendResponse(exchange, order.getStatus_code(), order.getResponse());
-                        else
-                            {sendResponse(exchange, 400, new JSONObject().toString()); return;}
-                        break;
-                    }
-                    default: {sendResponse(exchange, 400, new JSONObject().toString()); return;}
-                }
-            }
-            catch (Exception e)
-            {
-                //If we get a weird error, it's a bad HTTP
-                e.printStackTrace();
                 sendResponse(exchange, 400, new JSONObject().toString());
             }
             exchange.close();
@@ -451,40 +308,6 @@ public class OrderService
                         sendResponse(exchange, 200, response);
                     }
 
-                //     // Specify the file path where you want to search the JSON data
-                //     String filePath = System.getProperty("user.dir") + "/compiled/UserService/user_database.json";
-
-                //     // Read our JSON file database, and fill it into a JSONArray
-                //     FileReader fileReader = new FileReader(filePath);
-                //     JSONTokener tokener = new JSONTokener(fileReader);
-                //     JSONArray jsonArray = new JSONArray(tokener);
-
-                //     //find the matching user id within our jsonArray
-                //     for (int i = 0; i < jsonArray.length(); i++)
-                //     {
-                //         if (jsonArray.getJSONObject(i).getInt("id") == (userID))
-                //         {
-                //             response = jsonArray.getJSONObject(i).get("orders").toString();
-                //             validSearch = true;
-                //         }
-                //     }
-
-                //     if (validSearch)
-                //     {
-                //         sendResponse(exchange, 200, response);
-                //     }
-                //     else
-                //     {
-                //         //status code 404 id does not exist
-                //         sendResponse(exchange, 404, new JSONObject().toString());
-                //     }
-                //     fileReader.close();
-                //     tokener.close();
-                // }
-                // else
-                // {
-                //     //status code 405 for non Get Requests
-                //     sendResponse(exchange, 405, new JSONObject().toString());
                 }
                 else {
                     //status code 405 for non Get Requests
@@ -518,7 +341,7 @@ public class OrderService
         // Open a connection to the URL
         HttpURLConnection connection = (HttpURLConnection) serverUrl.toURL().openConnection();
 
-        if (command.equals("get") || command.equals("info"))
+        if (command.equals("get"))
             connection.setRequestMethod("GET");
         else
         {
@@ -609,60 +432,6 @@ public class OrderService
             }
             return requestBody.toString();
         }
-    }
-
-    /**
-     * Retrieves the IP address or port number from the config.json file based on the specified type (IPorPORT) and service (UPO).
-     *
-     * @param IPorPORT Either "IP" or "PORT" indicating whether to retrieve the IP address or port number.
-     * @param UPO The service identifier ('U' for UserService, 'P' for ProductService, 'O' for OrderService).
-     * @return The retrieved IP address or port number as a string.
-     */
-    public static String getIPorPORT(String IPorPORT, char UPO){
-
-        try {
-
-            // Get the current directory
-            String currentDirectory = System.getProperty("user.dir");
-
-            // Navigate to the parent directory twice
-            Path parentDirectory = Paths.get(currentDirectory);
-
-            // Specify the path to the config.json file
-            Path configFilePath = parentDirectory.resolve("config.json");
-
-            // Read the content of the config.json file into a string
-            String content = new String(Files.readAllBytes(configFilePath));
-
-            // Parse the string into a JSONObject
-            JSONObject jsonObject = new JSONObject(content);
-
-            if (UPO == 'U'){
-                JSONObject US = jsonObject.getJSONObject("UserService");
-                if (IPorPORT.equals("IP")){
-                    return US.getString("ip");
-                } else {
-                    return Integer.toString(US.getInt("port"));
-                }
-            } else if (UPO == 'P'){
-                JSONObject PS = jsonObject.getJSONObject("ProductService");
-                if (IPorPORT.equals("IP")){
-                    return PS.getString("ip");
-                } else {
-                    return Integer.toString(PS.getInt("port"));
-                }
-            } else if (UPO == 'O'){
-                JSONObject OS = jsonObject.getJSONObject("OrderService");
-                if (IPorPORT.equals("IP")){
-                    return OS.getString("ip");
-                } else {
-                    return Integer.toString(OS.getInt("port"));
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return "";
     }
 
     /**
