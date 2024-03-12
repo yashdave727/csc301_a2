@@ -28,7 +28,7 @@ public class OrderService
      */
     public static void main(String[] args) throws IOException
     {
-        String ip = "127.0.0.1";
+        String ip = "0.0.0.0";
         int port = -1;
         String ISCS_IP = "";
 
@@ -37,7 +37,6 @@ public class OrderService
         {
             ISCS_IP = args[1];
             port = Integer.parseInt(args[0]);
-            ip = "127.0.0.1";
         }
         else
         {

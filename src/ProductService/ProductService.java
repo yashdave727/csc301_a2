@@ -31,7 +31,7 @@ public class ProductService
      */
     public static void main(String[] args) throws IOException
     {
-        String ip = "127.0.0.1";
+        String ip = "0.0.0.0";
         int port = -1;
 
         // Get port from the command line
