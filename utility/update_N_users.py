@@ -5,12 +5,12 @@ This script is used to update N users in the system.
 
 import sys
 import time
-from threading import Thread
+from multiprocessing import Process
 import argparse
 import requests
 
 parser = argparse.ArgumentParser(description="Send N POST requests to URL/user at " +
-                                 "a rate of REQUESTS_PER_SECOND per thread.")
+                                 "a rate of REQUESTS_PER_SECOND per process.")
 parser.add_argument("URL", help="URL to update user")
 parser.add_argument("N", help="Number of users to update")
 # Defaults
@@ -20,41 +20,49 @@ URL = "http://localhost:8069"
 ENDPOINT = "/user"
 # Number of users to update
 N = 10
-# Number of threads
+# Number of processes
 NUM_THREADS = 8
 
-# Thread return codes
+# Process return codes
 RETURN_CODES = [0 for i in range(NUM_THREADS)]
 
 # Headers
 HEADERS = {"Content-Type": "application/json"}
 
-def update_n_users(thread_id, url):
+def update_n_users(process_id, url):
     """
     update n users in the system in a strided manner
     :param url: URL to update user
     :param start_id: start id of user
     :param n: number of users to update after start_id
 
-    This function is to be worked on by a thread to attempt to update all N
+    This function is to be worked on by a process to attempt to update all N
     users, at a rate of REQUESTS_PER_SECOND.
     """
     return_code = 0
 
     # Get users start_id to n
-    start_id = thread_id * (N // NUM_THREADS)
-    n = (thread_id + 1) * (N // NUM_THREADS)
+    start_id = process_id * (N // NUM_THREADS)
+    n = (process_id + 1) * (N // NUM_THREADS)
 
     start_time = time.perf_counter()
     for _i in range(start_id, n):
         # User data
         data = {
-            "command": "update",
+            "command": "update", # update user
             "id": _i,
             "username": "user" + str(_i),
             "password": "password" + str(_i),
             "email": "user" + str(_i) + "@example.com"
         }
+
+        # Randomly delete some of the user data (except command and id)
+        if _i % 2 == 0:
+            del data["password"]
+        if _i % 3 == 0:
+            del data["email"]
+        if _i % 5 == 0:
+            del data["username"]
 
         # Send POST request to update user
         # Stop the process if there is an error that prevents the rest of the
@@ -91,11 +99,11 @@ def update_n_users(thread_id, url):
     end_time = time.perf_counter()
 
     if return_code == 0:
-        print("Thread", thread_id, "took", end_time - start_time, "seconds", file=sys.stderr)
+        print("Process", process_id, "took", end_time - start_time, "seconds", file=sys.stderr)
     else:
-        print("Thread", thread_id, "failed", file=sys.stderr)
+        print("Process", process_id, "failed", file=sys.stderr)
 
-    RETURN_CODES[thread_id] = return_code
+    RETURN_CODES[process_id] = return_code
 
 def main():
     """
@@ -116,36 +124,36 @@ def main():
             parser.print_usage()
             sys.exit(1)
 
-    # Get N users at a rate of REQUESTS_PER_SECOND per thread
-    print("Updating", N, "users with 8 threads", file=sys.stderr)
+    # Get N users at a rate of REQUESTS_PER_SECOND per process
+    print("Updating", N, "users with 8 processes", file=sys.stderr)
     # Print out statistics
-    print("Each thread will update ", N // NUM_THREADS, "users", file=sys.stderr)
+    print("Each process will update ", N // NUM_THREADS, "users", file=sys.stderr)
     for i in range(NUM_THREADS):
-        print("Thread", i, "will update users",
+        print("Process", i, "will update users",
               i * (N // NUM_THREADS), "to", (i + 1) * (N // NUM_THREADS), file=sys.stderr)
 
-    # Update threads (one for each core on the machine)
-    threads = []
+    # Update processes (one for each core on the machine)
+    processes = []
     start_time = time.perf_counter()
     for i in range(NUM_THREADS):
-        thread = Thread(target=update_n_users, args=(i, URL+ENDPOINT))
-        thread.start()
-        threads.append(thread)
+        process = Process(target=update_n_users, args=(i, URL+ENDPOINT))
+        process.start()
+        processes.append(process)
 
-    # Wait for all threads to finish
-    for thread in threads:
-        thread.join()
+    # Wait for all processes to finish
+    for process in processes:
+        process.join()
     end_time = time.perf_counter()
 
-    print("All threads finished (took", end_time - start_time, "seconds).", file=sys.stderr)
+    print("All processes finished (took", end_time - start_time, "seconds).", file=sys.stderr)
     # Print out statistics
 
     if 1 in RETURN_CODES:
-        print("One or more threads failed.", file=sys.stderr)
+        print("One or more processes failed.", file=sys.stderr)
         sys.exit(1)
 
     print(f"Updated {N} users ({N} requests total)", file=sys.stderr)
-    print("On", NUM_THREADS, "threads.", file=sys.stderr)
+    print("On", NUM_THREADS, "processes.", file=sys.stderr)
     print("Total time:", end_time - start_time, "seconds.", file=sys.stderr)
     print("Average time per request:", (end_time - start_time) / N, "seconds.", file=sys.stderr)
     print("Average requests per second:", N / (end_time - start_time), file=sys.stderr)
