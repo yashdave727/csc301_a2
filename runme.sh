@@ -46,12 +46,12 @@ read_config() {
 	# get the product ips as an array from the JSON without jq
 	declare -g PRODUCT_IPS=$(echo "$config" | grep -oP '"product": \[\K[^]]+')
 
-	echo "USER_IPS: $USER_IPS"
-	echo "USER_PORT: $USER_PORT"
-	echo "PRODUCT_IPS: $PRODUCT_IPS"
-	echo "PRODUCT_PORT: $PRODUCT_PORT"
-	echo "ORDER_PORT: $ORDER_PORT"
-	echo "ISCS_PORT: $ISCS_PORT"
+#	echo "USER_IPS: $USER_IPS"
+#	echo "USER_PORT: $USER_PORT"
+#	echo "PRODUCT_IPS: $PRODUCT_IPS"
+#	echo "PRODUCT_PORT: $PRODUCT_PORT"
+#	echo "ORDER_PORT: $ORDER_PORT"
+#	echo "ISCS_PORT: $ISCS_PORT"
 }
 
 SYSTEM_DIR="~/csc301/csc301_a2"
@@ -86,10 +86,11 @@ user_services() {
 		# Strip the quotes from the user_ip
 		user_ip=$(echo $user_ip | tr -d '"')
 		# Run the user service on the user_ip
-		ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $USERNAME@$user_ip "cd $SYSTEM_DIR; ./runme.sh -u $USER_PORT"
+		ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $USERNAME@$user_ip "cd $SYSTEM_DIR; bash runme.sh -u $USER_PORT" &
 		# Check that the command was successful
 		if [ "$?" -eq 0 ]; then
 			echo "User service started at $USERNAME@$user_ip"
+			echo $user_ip >> users.txt
 		else
 			echo "User service failed to start on $user_ip"
 			# Remove the user service from the list of user services
