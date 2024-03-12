@@ -14,5 +14,9 @@
   "InterServiceCommunication": {
     "port": 14000,
     "ip": "127.0.0.1"
+  },
+  "Database": {
+    "port": 5432,
+    "ip": "142.1.46.61"
   }
 }

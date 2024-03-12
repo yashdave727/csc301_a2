@@ -26,4 +26,4 @@ PRODUCT create 1 name description 4 5
 PRODUCT info 1
 ORDER place 1 4 1
 PRODUCT info 1
-shutdown
+ORDER place 2 2 5
