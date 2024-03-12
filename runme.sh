@@ -5,9 +5,6 @@ script_dir=$(dirname "$(readlink -f "$0")")
 
 # Function to compile Java code
 compile_code() {
-#    javac -d "$script_dir/compiled/OrderService" -cp "$script_dir/src/json-20231013.jar" "$script_dir/src/OrderService"/*.java
-#    javac -d "$script_dir/compiled/ProductService" -cp "$script_dir/src/json-20231013.jar" "$script_dir/src/ProductService"/*.java
-#    javac -d "$script_dir/compiled/UserService" -cp "$script_dir/src/json-20231013.jar" "$script_dir/src/UserService"/*.java
     javac -d "$script_dir/compiled/OrderService" -cp "$script_dir/src/json-20231013.jar:$script_dir/src/postgresql-42.7.2.jar" "$script_dir/src/OrderService"/*.java
     javac -d "$script_dir/compiled/ProductService" -cp "$script_dir/src/json-20231013.jar:$script_dir/src/postgresql-42.7.2.jar" "$script_dir/src/ProductService"/*.java
     javac -d "$script_dir/compiled/UserService" -cp "$script_dir/src/json-20231013.jar:$script_dir/src/postgresql-42.7.2.jar" "$script_dir/src/UserService"/*.java
@@ -34,21 +31,18 @@ compile_code() {
 # Function to start the UserService
 start_us() {
     # Run the Java program with the script directory as an argument
-#    java -cp "$script_dir/compiled/UserService:$script_dir/compiled/json-20231013.jar" UserService "$script_dir"
     java -cp "$script_dir/compiled/UserService:$script_dir/compiled/json-20231013.jar:$script_dir/compiled/postgresql-42.7.2.jar" UserService "$script_dir"
 }
 
 # Function to start the ProductService
 start_ps() {
     # Run the Java program with the script directory as an argument
-#    java -cp "$script_dir/compiled/ProductService:$script_dir/compiled/json-20231013.jar" ProductService "$script_dir"
     java -cp "$script_dir/compiled/ProductService:$script_dir/compiled/json-20231013.jar:$script_dir/compiled/postgresql-42.7.2.jar" ProductService "$script_dir"
 }
 
 # Function to start the OrderService
 start_os() {
     # Run the Java program with the script directory as an argument
-#    java -cp "$script_dir/compiled/OrderService:$script_dir/compiled/json-20231013.jar" OrderService "$script_dir"
     java -cp "$script_dir/compiled/OrderService:$script_dir/compiled/json-20231013.jar:$script_dir/compiled/postgresql-42.7.2.jar" OrderService "$script_dir"
 }
 
