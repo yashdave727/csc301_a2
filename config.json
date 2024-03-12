@@ -1,22 +1,10 @@
 {
-  "UserService": {
-    "port": 8069,
-    "ip": "127.0.0.1"
-  },
-  "OrderService": {
-    "port": 8068,
-    "ip": "127.0.0.1"
-  },
-  "ProductService": {
-    "port": 8065,
-    "ip": "127.0.0.1"
-  },
-  "InterServiceCommunication": {
-    "port": 14000,
-    "ip": "127.0.0.1"
-  },
-  "Database": {
-    "port": 5432,
-    "ip": "142.1.46.61"
-  }
+	"iscs": "localhost",
+	"iscs_port": 7999,
+	"order": "localhost",
+	"order_port": 7998,
+	"user": ["dh2020pc20.utm.utoronto.ca"],
+	"user_port": 8000,
+	"product": ["dh2020pc20.utm.utoronto.ca"],
+	"product_port": 9000
 }
