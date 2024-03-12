@@ -10,7 +10,7 @@ import java.sql.*;
 
 class UserDatabase {
 
-    private final String url = "jdbc:postgresql://localhost:5435/assignmentdb";
+    private final String url = "jdbc:postgresql://142.1.46.61:5434/assignmentdb";
     private final String user = "assignmentuser";
     private final String password = "assignmentpassword";
 
@@ -83,7 +83,7 @@ class UserDatabase {
                 return 409; // Duplicate entry
             }
             else {
-                return 500; // Internal Server Error
+                return 400; // Internal Server Error
             }
         }
     }
@@ -135,11 +135,11 @@ class UserDatabase {
             }
         }
         catch (SQLException e) {
-            return 500; // Internal Server Error
+            return 400; // Internal Server Error
         }
     }
 
-    private static String hashPassword(String password) {
+    public static String hashPassword(String password) {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
             byte[] hashedBytes = md.digest(password.getBytes(StandardCharsets.UTF_8));
@@ -203,7 +203,7 @@ class UserDatabase {
             }
         }
         catch (SQLException e) {
-            return 500; // Internal Server Error
+            return 400; // Internal Server Error
         }
     }
 }

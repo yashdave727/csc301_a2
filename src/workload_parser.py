@@ -91,14 +91,14 @@ def parse_and_send_request(url, line):
                     data['user_id'] = tokens[3]
                     data['quantity'] = tokens[4]
 
-            case "restart":
-                endpoint = "/database"
-                data['command'] = "restart"
-
-            case "shutdown":
-                endpoint = "/database"
-                data['command'] = "shutdown"
-
+#            case "restart":
+#                endpoint = "/database"
+#                data['command'] = "restart"
+#
+#            case "shutdown":
+#                endpoint = "/database"
+#                data['command'] = "shutdown"
+#
             case _:
                 print("error: unidentified token: " + tokens[0])
 

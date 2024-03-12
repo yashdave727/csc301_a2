@@ -116,7 +116,7 @@ def main():
     print(f"NUM_USER_SERVICES: {NUM_USER_SERVICES}", file=sys.stderr)
 
     # Start listening for requests with a multi-threaded server
-    app.run(port=ISCS_PORT, threaded=True)
+    app.run(host="0.0.0.0", port=ISCS_PORT, threaded=True)
 
 if __name__ == "__main__":
     main()

@@ -4,7 +4,7 @@ import java.sql.*;
  * UserDatabase class provides methods for managing user data in a SQLite database.
  */
 public class ProductDatabase {
-    private final String url = "jdbc:postgresql://localhost:5435/assignmentdb";
+    private final String url = "jdbc:postgresql://142.1.46.61:5434/assignmentdb";
     private final String user = "assignmentuser";
     private final String password = "assignmentpassword";
 
@@ -101,22 +101,21 @@ public class ProductDatabase {
                 return 409; // Duplicate entry
             }
             else {
-                return 500; // Internal Server Error
+                return 400; // Internal Server Error
             }
         }
     }
 
-    public int deleteProduct(int id, String name, String description, float price, int quantity) {
-        String sql = "DELETE FROM products WHERE id = ? AND name = ? AND description = ? AND price = ? AND" +
+    public int deleteProduct(int id, String name, float price, int quantity) {
+        String sql = "DELETE FROM products WHERE id = ? AND name = ? AND price = ? AND" +
                 " quantity = ?";
 
         try (Connection con = this.connect();
              PreparedStatement statement = con.prepareStatement(sql)) {
             statement.setInt(1, id);
             statement.setString(2, name);
-            statement.setString(3, description);
-            statement.setFloat(4, price);
-            statement.setInt(5, quantity);
+            statement.setFloat(3, price);
+            statement.setInt(4, quantity);
             int affectedRows = statement.executeUpdate();
 
             // Product had been deleted if number of rows has changed
@@ -129,7 +128,7 @@ public class ProductDatabase {
             }
         }
         catch (SQLException e) {
-            return 500; // Internal Server Error
+            return 400; // Internal Server Error
         }
     }
 
@@ -191,7 +190,7 @@ public class ProductDatabase {
             }
         }
         catch (SQLException e) {
-            return 500; // Internal Server Error
+            return 400; // Internal Server Error
         }
     }
 

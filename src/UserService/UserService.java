@@ -32,7 +32,7 @@ public class UserService
      */
     public static void main(String[] args) throws IOException
     {
-        String ip = "127.0.0.1";
+        String ip = "0.0.0.0";
         int port = -1;
 
         // Get port from the command line
@@ -100,6 +100,7 @@ public class UserService
                         case "delete":
                             delete(exchange, jsonObject); break;
                         default:
+			    System.out.println("HELLO 103");
                             sendResponse(exchange, 400, new JSONObject().toString()); break;
                     }
                 }
@@ -107,6 +108,7 @@ public class UserService
             catch (Exception e)
             {
                 e.printStackTrace();
+		System.out.println("HELLO 111");
                 //If any weird error occurs, then UserService has received a bad http request
                 sendResponse(exchange, 400, new JSONObject().toString());
             }
@@ -125,7 +127,8 @@ public class UserService
         try {
             // Check if all required fields are present, including the ID
             if (!jsonObject.has("id") || !jsonObject.has("username") || !jsonObject.has("email") || !jsonObject.has("password")) {
-                sendResponse(exchange, 400, new JSONObject().toString());
+                System.out.println("HELLO 130");
+		sendResponse(exchange, 400, new JSONObject().toString());
                 return;
             }
 
@@ -143,7 +146,7 @@ public class UserService
             responseBody.put("id", id);
             responseBody.put("username", username);
             responseBody.put("email", email);
-            responseBody.put("password", password);
+            responseBody.put("password", UserDatabase.hashPassword(password));
 
             if (statusCode == 200) {
                 sendResponse(exchange, 200, responseBody.toString());
@@ -152,7 +155,8 @@ public class UserService
             }
         } catch (Exception e) {
             e.printStackTrace();
-            sendResponse(exchange, 400, new JSONObject().toString());
+            System.out.println("HELLO 158");
+	    sendResponse(exchange, 400, new JSONObject().toString());
         }
     }
 
@@ -187,12 +191,14 @@ public class UserService
                     sendResponse(exchange, updateStatus, new JSONObject().toString());
                 }
             } else {
+		System.out.println("HELLO (In Order Service Update)");
                 sendResponse(exchange, 400, new JSONObject().toString());
             }
         }
         catch (Exception e)
         {
             e.printStackTrace();
+	    System.out.println("HELLO (In Order Service Update, it errors)");
             //If any weird error occurs, then UserService has received a bad http request
             sendResponse(exchange, 400, new JSONObject().toString());
         }
@@ -228,11 +234,13 @@ public class UserService
             }
             // The fields provided are invalid
             else {
+		System.out.println("HELLO (In Order Service Delete, invalid fields)");
                 sendResponse(exchange, 400, new JSONObject().toString());
             }
         }
         catch (Exception e)
         {
+	    System.out.println("HELLO (In Order Service delete, it errors)");
             //If any weird error occurs, then UserService has received a bad http request
             sendResponse(exchange, 400, new JSONObject().toString());
         }
