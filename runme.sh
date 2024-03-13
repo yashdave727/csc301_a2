@@ -69,6 +69,10 @@ start_iscs() {
 	python3 "$script_dir/compiled/ISCS/iscs.py" "$ISCS_PORT" "-d"
 }
 
+start_db() {
+	./runme_db.sh
+}
+
 # Main script
 case "$1" in
     -c)
@@ -88,6 +92,9 @@ case "$1" in
         ;;
     -w)
         start_wg "$2"
+	;;
+    -d)
+	start_db
 	;;
     *)
         echo "Usage: $0 { -c | -u port | -p port | -i port | -o port iscs_ip iscs_port | -w workloadfile }"
