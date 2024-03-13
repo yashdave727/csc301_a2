@@ -197,17 +197,17 @@ def _debug_info():
     print("ISCS Configuration:", file=sys.stderr)
     print(f"  ISCS Port: {ISCS_PORT}", file=sys.stderr)
     # Print out the user service IPs and port
-    print("  User Services:", file=sys.stderr)
+    print(f"  User Services: (total: {LEN_USER_IPS})", file=sys.stderr)
     for ip in USER_IPS:
         print(f"    {ip}:{USER_PORT}", file=sys.stderr)
 
     # Print out the product service IPs and port
-    print("  Product Services:", file=sys.stderr)
+    print(f"  Product Services: (total: {LEN_PRODUCT_IPS})", file=sys.stderr)
     for ip in PRODUCT_IPS:
         print(f"    {ip}:{PRODUCT_PORT}", file=sys.stderr)
 
     # Print out the order service IPs and port
-    print("  Order Services:", file=sys.stderr)
+    print(f"  Order Services: (total: {LEN_PRODUCT_IPS})", file=sys.stderr)
     for ip in ORDER_IPS:
         print(f"    {ip}:{ORDER_PORT}", file=sys.stderr)
 
