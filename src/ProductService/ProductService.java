@@ -80,8 +80,10 @@ public class ProductService
         {
             try
             {
+		System.out.println(exchange.getRequestMethod());
                 if ("POST".equals(exchange.getRequestMethod()))
                 {
+		    System.out.println("It's a POST");
                     //Initialize variables
                     String productData = getRequestBody(exchange);
                     JSONObject jsonObject = new JSONObject(productData);
@@ -127,6 +129,7 @@ public class ProductService
             String name, description;
             JSONObject responseBody = new JSONObject();
 
+	    System.out.println("Before everything");
             if (jsonObject.has("id") && jsonObject.has("name") && jsonObject.has("description")
                     && jsonObject.has("price") && jsonObject.has("quantity")) {
 
@@ -136,13 +139,16 @@ public class ProductService
                 price = jsonObject.getFloat("price");
                 quantity = jsonObject.getInt("quantity");
 
+		System.out.println("Entered first if statement");
                 int createStatus = productDB.createProduct(id, name, description, price, quantity);
                 if (createStatus == 200) {
+		    System.out.println("Entered second if statement");
                     responseBody.put("id", id);
                     responseBody.put("name", name);
                     responseBody.put("description", description);
                     responseBody.put("price", price);
                     responseBody.put("quantity", quantity);
+		    System.out.println(responseBody.toString());
                     sendResponse(exchange, createStatus, responseBody.toString());
                 } else {
                     sendResponse(exchange, createStatus, new JSONObject().toString());
@@ -150,7 +156,7 @@ public class ProductService
             }
             // The fields provided are invalid
             else {
-                sendResponse(exchange,400, new JSONObject().toString());
+                sendResponse(exchange, 400, new JSONObject().toString());
             }
         }
         catch (Exception e)
@@ -199,7 +205,7 @@ public class ProductService
         catch (Exception e)
         {
             //If any weird error occurs, then ProductService has received a bad http request
-            sendResponse(exchange, 400, new JSONObject().toString());
+            sendResponse(exchange, 404, new JSONObject().toString());
         }
     }
 
@@ -222,11 +228,10 @@ public class ProductService
 
                 id = jsonObject.getInt("id");
                 name = jsonObject.getString("name");
-                description = jsonObject.getString("description");
                 price = jsonObject.getFloat("price");
                 quantity = jsonObject.getInt("quantity");
 
-                int deleteStatus = productDB.deleteProduct(id, name, description, price, quantity);
+                int deleteStatus = productDB.deleteProduct(id, name, price, quantity);
                 // The deletion is valid, and return empty response with status code 200.
                 if (deleteStatus == 200) {
                     sendResponse(exchange, deleteStatus, new JSONObject().toString());

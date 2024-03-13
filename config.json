@@ -1,10 +1,21 @@
 {
-	"iscs": "localhost",
-	"iscs_port": 7999,
-	"order": "localhost",
-	"order_port": 7998,
-	"user": ["dh2020pc20.utm.utoronto.ca"],
-	"user_port": 8000,
-	"product": ["dh2020pc20.utm.utoronto.ca"],
-	"product_port": 9000
-}
+  "UserService": {
+    "port": 8000,
+    "ip": "dh2020pc26.utm.utoronto.ca"
+  },
+  "ProductService": {
+    "port": 9000,
+    "ip": "dh2020pc26.utm.utoronto.ca"
+  },
+  "OrderService": {
+    "port": 7998,
+    "ip": "dh2020pc29.utm.utoronto.ca"
+  },
+  "InterServiceCommunication": {
+    "port": 7999,
+    "ip": "dh2020pc29.utm.utoronto.ca"
+  },
+  "Database": {
+    "port": 5434,
+    "ip": "142.1.46.61"
+  }

@@ -3,6 +3,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.sql.*;
+import org.json.JSONObject;
 
 /**
  * OrderDatabase class provides methods for managing user data in a SQLite database.
@@ -10,7 +11,7 @@ import java.sql.*;
 
 class OrderDatabase {
 
-    private static final String url = "jdbc:postgresql://localhost:5435/assignmentdb";
+    private static final String url = "jdbc:postgresql://142.1.46.61:5434/assignmentdb";
     private static final String user = "assignmentuser";
     private static final String password = "assignmentpassword";
 
@@ -66,7 +67,7 @@ class OrderDatabase {
      * @param quantity is the quantity of the bought product.
      * @return An HTTP status code representing the result of the operation.
      */
-    public int placeOrder(int user_id, int prod_id, int quantity) {
+    public int placeOrder(int user_id, int prod_id, int quantity, int newQuantity) {
         String sql = "INSERT INTO orders(user_id, prod_id, quantity) VALUES(?, ?, ?)";
         try (Connection con = this.connect();
              PreparedStatement statement = con.prepareStatement(sql)) {
@@ -74,7 +75,10 @@ class OrderDatabase {
             statement.setInt(2, prod_id);
             statement.setInt(3, quantity);
             statement.executeUpdate();
-            return 200; // OK - User created successfully
+
+            int updated = updateQuantity(prod_id, newQuantity);
+
+            return updated; // OK - User created successfully
         }
         // The PostgreSQL 23505 UNIQUE VIOLATION error occurs when a unique constraint is violated. See the link below
         // https://www.metisdata.io/knowledgebase/errors/postgresql-23505#:~:text=The%20PostgreSQL%
@@ -84,7 +88,7 @@ class OrderDatabase {
                 return 409; // Duplicate entry
             }
             else {
-                return 500; // Internal Server Error
+                return 400; // Internal Server Error
             }
         }
     }
@@ -100,16 +104,21 @@ class OrderDatabase {
              PreparedStatement statement = con.prepareStatement(sql)) {
             statement.setInt(1, user_id);
             ResultSet current = statement.executeQuery();
-            String finalJSONString = "{";
+	    JSONObject finalJSON = new JSONObject();
             while (current.next()) {
-                int prodId = current.getInt("prod_id");
+                String prodId = Integer.toString(current.getInt("prod_id"));
                 int quantity = current.getInt("quantity");
-                finalJSONString += String.format("\"%d\": %d,", prodId, quantity);
+
+		if (finalJSON.has(prodId)) {
+			finalJSON.put(prodId, finalJSON.getInt(prodId) + quantity);
+		}
+		else {
+			finalJSON.put(prodId, quantity);
+		}
+
             }
 
-            finalJSONString = finalJSONString.substring(0, finalJSONString.length() - 1);
-            finalJSONString += "}";
-            return finalJSONString;
+            return finalJSON.toString();
         }
         catch (SQLException e) {
             return String.format("{\"error_message\": \"Get Order for user_id %d Did Not Work\"}", user_id);
@@ -170,6 +179,31 @@ class OrderDatabase {
         }
         return "";
     }
+
+
+    public int updateQuantity(int prod_id, int quantity) {
+        String sql = "UPDATE products SET quantity = ? WHERE id = ?";
+
+        try (Connection con = this.connect();
+             PreparedStatement statement = con.prepareStatement(sql)) {
+            statement.setInt(1, quantity);
+            statement.setInt(2, prod_id);
+            int affectedRows = statement.executeUpdate();
+
+            // User had been updated if any of the columns' values have changed
+            if (affectedRows > 0) {
+                return 200;
+            }
+            else {
+                return 400;
+            }
+        }
+        catch (SQLException e) {
+            return 500; // Internal Server Error
+        }
+    }
+
+
 
     public int deleteUser(int id, String username, String email, String password) {
         String sql = "UPDATE users SET deleted = TRUE WHERE id = ? AND username = ? AND email = ? AND password = ?";

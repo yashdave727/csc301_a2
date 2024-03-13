@@ -36,7 +36,7 @@ def forward_request(endpoint):
     """
     # Get the next IP address for the given service
     next_ip = get_next_service_ip(endpoint)
-
+    print(endpoint, "post")
     # Debugging info
     if app.debug and next_ip:
         print(f"Forwarding request to {next_ip}/{endpoint}", file=sys.stderr)
@@ -47,7 +47,8 @@ def forward_request(endpoint):
         # Forward the request to the next service
         return redirect(f"{next_ip}/{endpoint}", code=307)
     # Invalid endpoint
-    return jsonify({"error": "Invalid endpoint"}), 400
+    print("TESTGET")
+    return jsonify({"error": "ISCS Invalid endpoint"}), 400
 
 @app.route('/<endpoint>/<_id>', methods=['GET'])
 def forward_request_with_id(endpoint, _id):
@@ -59,6 +60,7 @@ def forward_request_with_id(endpoint, _id):
     # Get the next IP address for the given service
     next_ip = get_next_service_ip(endpoint)
 
+    print(endpoint, "get")
     # Debugging info
     if app.debug and next_ip:
         print(f"Forwarding request to {next_ip}/{endpoint}/{_id}", file=sys.stderr)
@@ -69,7 +71,8 @@ def forward_request_with_id(endpoint, _id):
         # Forward the request to the next service
         return redirect(f"{next_ip}/{endpoint}/{_id}", code=307)
     # Invalid endpoint
-    return jsonify({"error": "Invalid endpoint"}), 400
+    print("TESTGET")
+    return jsonify({"error": "ISCS Invalid endpoint"}), 400
 
 # Error handling (defined in a for loop to avoid repetition)
 
@@ -191,7 +194,7 @@ def main():
     print("Starting ISCS...", file=sys.stderr)
 
     # Start listening for requests with a multi-threaded server
-    app.run(port=ISCS_PORT, threaded=True)
+    app.run(host="0.0.0.0", port=ISCS_PORT, threaded=True)
 
 if __name__ == "__main__":
     main()
