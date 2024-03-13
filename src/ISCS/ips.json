@@ -1,6 +1,6 @@
 {
-	"user": ["dh2020pc01", "dh2020pc02", "dh2020pc03"],
-	"product": ["dh2026pc01", "dh2026pc02", "dh2026pc03"],
+	"user": ["dh2020pc26.utm.utoronto.ca"],
+	"product": ["dh2020pc26.utm.utoronto.ca"],
 	"user_port": 8000,
 	"product_port": 9000
 }
