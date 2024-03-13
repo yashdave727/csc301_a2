@@ -1,3 +1,4 @@
+#!/bin/python3
 '''
 update_N_users.py
 This script is used to update N users in the system.

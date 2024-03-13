@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 '''
 delete_N_products.py
 This script is used to delete N products in the system.

@@ -1,3 +1,4 @@
+#!/bin/python3
 '''
 stress_test.py
 

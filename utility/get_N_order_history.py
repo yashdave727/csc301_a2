@@ -1,3 +1,4 @@
+#!/bin/python3
 '''
 get_N_users.py
 This script is used to get N the order history of N users in the system.

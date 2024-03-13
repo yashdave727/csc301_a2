@@ -1,3 +1,4 @@
+#!/bin/python3
 '''
 get_N_products.py
 This script is used to get N products in the system.

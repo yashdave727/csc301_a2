@@ -1,3 +1,4 @@
+#!/bin/python3
 '''
 delete_N_users.py
 This script is used to delete N users in the system.
