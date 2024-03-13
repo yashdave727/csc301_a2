@@ -29,94 +29,27 @@ compile_code() {
     fi
 }
 
-# Function to read in the config file
-read_config() {
-	# Read in the config file
-	config=$(cat config.json)
-	# echo "config: $config"
-	# Parse the JSON without jq
-	declare -g USER_PORT=$(echo "$config" | grep -oP '"user_port": \K[0-9]+')
-	declare -g PRODUCT_PORT=$(echo "$config" | grep -oP '"product_port": \K[0-9]+')
-	declare -g ORDER_PORT=$(echo "$config" | grep -oP '"order_port": \K[0-9]+')
-	declare -g ISCS_IP=$(echo "$config" | grep -oP '"iscs_ip": "\K[^"]+')
-	declare -g ISCS_PORT=$(echo "$config" | grep -oP '"iscs_port": \K[0-9]+')
-
-	# Get the user ips as an array from the JSON without jq
-	declare -g USER_IPS=$(echo "$config" | grep -oP '"user": \[\K[^]]+')
-	# get the product ips as an array from the JSON without jq
-	declare -g PRODUCT_IPS=$(echo "$config" | grep -oP '"product": \[\K[^]]+')
-
-#	echo "USER_IPS: $USER_IPS"
-#	echo "USER_PORT: $USER_PORT"
-#	echo "PRODUCT_IPS: $PRODUCT_IPS"
-#	echo "PRODUCT_PORT: $PRODUCT_PORT"
-#	echo "ORDER_PORT: $ORDER_PORT"
-#	echo "ISCS_PORT: $ISCS_PORT"
-}
-
-SYSTEM_DIR="~/csc301/csc301_a2"
-
-# Function to start the ProductServices
-product_services() {
-	USERNAME=$1
-	# For each product ip in the array, start a product service
-	# first ssh to the product ip and then run the product service on the product port
-	# The ssh username is provided as an environment variable
-	for product_ip in $PRODUCT_IPS; do
-		# Strip the quotes from the product_ip
-		product_ip=$(echo $product_ip | tr -d '"')
-		# Run the product service on the product_ip
-		ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $USERNAME@$product_ip "cd $SYSTEM_DIR; ./runme.sh -p $PRODUCT_PORT"
-		# Check that the command was successful
-		if [ "$?" -eq 0 ]; then
-			echo "Product service started at $USERNAME@$product_ip"
-		else
-			echo "Product service failed to start on $product_ip"
-			# Remove the product service from the list of product services
-		fi
-	done
-}
-# Function to start the UserServices
-user_services() {
-	# For each user ip in the array, start a user service
-	# first ssh to the user ip and then run the user service on the user port
-	# The ssh username is provided as an environment variable
-	USERNAME=$1
-	for user_ip in $USER_IPS; do
-		# Strip the quotes from the user_ip
-		user_ip=$(echo $user_ip | tr -d '"')
-		# Run the user service on the user_ip
-		ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $USERNAME@$user_ip "cd $SYSTEM_DIR; bash runme.sh -u $USER_PORT" &
-		# Check that the command was successful
-		if [ "$?" -eq 0 ]; then
-			echo "User service started at $USERNAME@$user_ip"
-			echo $user_ip >> users.txt
-		else
-			echo "User service failed to start on $user_ip"
-			# Remove the user service from the list of user services
-		fi
-	done
-}
-
 # Function to start the UserServices
 start_us() {
 	# run the user service with the user port
-	echo "Starting user service on port $USER_PORT"
+	USER_PORT=$1
 	java -cp "$script_dir/compiled/UserService:$script_dir/compiled/json-20231013.jar:$script_dir/compiled/postgresql-42.7.2.jar" UserService "$USER_PORT"
 }
 
 # Function to start the ProductService
 start_ps() {
 	# Run the product service with the product port
-	echo "Starting product service on port $PRODUCT_PORT"
+	PRODUCT_PORT=$1
 	java -cp "$script_dir/compiled/ProductService:$script_dir/compiled/json-20231013.jar:$script_dir/compiled/postgresql-42.7.2.jar" ProductService "$PRODUCT_PORT"
 }
 
 # Function to start the OrderService
 start_os() {
 	# Run the order service with the order port and the ISCS IP and port
-	echo "Starting order service on port $ORDER_PORT"
-	echo "ISCS: $ISCS_IP:$ISCS_PORT"
+	ORDER_PORT=$1
+	ISCS_IP=$2
+	ISCS_PORT=$3
+	echo "Starting OrderService with port $ORDER_PORT and ISCS IP $ISCS_IP and port $ISCS_PORT"
 	java -cp "$script_dir/compiled/OrderService:$script_dir/compiled/json-20231013.jar:$script_dir/compiled/postgresql-42.7.2.jar" OrderService "$ORDER_PORT" "$ISCS_IP:$ISCS_PORT"
 }
 
@@ -132,11 +65,9 @@ start_wg() {
 
 # Function to start the ISCS
 start_iscs() {
-    python3 "$script_dir/compiled/ISCS/iscs.py" "$ISCS_PORT" "-d"
+	ISCS_PORT=$1
+	python3 "$script_dir/compiled/ISCS/iscs.py" "$ISCS_PORT" "-d"
 }
-
-# read in config from config.json
-read_config
 
 # Main script
 case "$1" in
@@ -144,28 +75,22 @@ case "$1" in
         compile_code
         ;;
     -u)
-        start_us
+        start_us "$2"
         ;;
     -p)
-        start_ps
+        start_ps "$2"
         ;;
     -i)
-        start_iscs
+        start_iscs "$2"
         ;;
     -o)
-        start_os
+        start_os "$2" "$3" "$4"
         ;;
     -w)
         start_wg "$2"
-        ;;
-    -U)
-	user_services "$2"
-	;;
-    -P)
-	product_services "$2"
 	;;
     *)
-        echo "Usage: $0 {-c|-u|-p|-i|-o|-w workloadfile}"
+        echo "Usage: $0 { -c | -u port | -p port | -i port | -o port iscs_ip iscs_port | -w workloadfile }"
         exit 1
         ;;
 esac
