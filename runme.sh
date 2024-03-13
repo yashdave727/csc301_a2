@@ -97,7 +97,7 @@ case "$1" in
 	start_db
 	;;
     *)
-        echo "Usage: $0 { -c | -u port | -p port | -i port | -o port iscs_ip iscs_port | -w workloadfile }"
+        echo "Usage: $0 { -c | -d | -u port | -p port | -i port | -o port | -w workloadfile }"
         exit 1
         ;;
 esac
