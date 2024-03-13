@@ -24,6 +24,14 @@ PRODUCT_PORT = 9000
 USER_IPS = ["localhost"]
 PRODUCT_IPS = ["localhost"]
 
+# LEN OF USER_IPS AND PRODUCT_IPS
+LEN_USER_IPS = 1
+LEN_PRODUCT_IPS = 1
+
+# Current index of the user and product services
+USER_INDEX = 0
+PRODUCT_INDEX = 0
+
 app = Flask(__name__)
 
 # Redirect routes
@@ -93,12 +101,14 @@ def get_next_service_ip(endpoint_name):
     """
     # Get the next IP address for the given service
     if endpoint_name == "user":
-        ip = USER_IPS.pop(0)
-        USER_IPS.append(ip)
+        global USER_INDEX
+        ip = USER_IPS[USER_INDEX]
+        USER_INDEX = (USER_INDEX + 1) % LEN_USER_IPS
         return f"http://{ip}:{USER_PORT}"
     if endpoint_name == "product":
-        ip = PRODUCT_IPS.pop(0)
-        PRODUCT_IPS.append(ip)
+        global PRODUCT_INDEX
+        ip = PRODUCT_IPS[PRODUCT_INDEX]
+        PRODUCT_INDEX = (PRODUCT_INDEX + 1) % LEN_PRODUCT_IPS
         return f"http://{ip}:{PRODUCT_PORT}"
     return None
 
@@ -113,7 +123,7 @@ def read_ips():
         "product_port": port_number
     }
     """
-    global USER_IPS, PRODUCT_IPS, USER_PORT, PRODUCT_PORT
+    global USER_IPS, PRODUCT_IPS, USER_PORT, PRODUCT_PORT, LEN_USER_IPS, LEN_PRODUCT_IPS
 
     # change directory to the current file's directory (to read in the ips.json file)
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
@@ -125,6 +135,10 @@ def read_ips():
         PRODUCT_IPS = data["product"]
         USER_PORT = data["user_port"]
         PRODUCT_PORT = data["product_port"]
+
+    LEN_USER_IPS = len(USER_IPS)
+    LEN_PRODUCT_IPS = len(PRODUCT_IPS)
+
 
     # if debug is set, print out the number of user and product services and their IP addresses
     if app.debug:
@@ -192,6 +206,12 @@ def main():
             print(f"    {ip}:{PRODUCT_PORT}", file=sys.stderr)
 
     print("Starting ISCS...", file=sys.stderr)
+
+    # Disable all logging for performance
+    if not app.debug:
+        import logging
+        log = logging.getLogger('werkzeug')
+        log.setLevel(logging.ERROR)
 
     # Start listening for requests with a multi-threaded server
     app.run(host="0.0.0.0", port=ISCS_PORT, threaded=True)
