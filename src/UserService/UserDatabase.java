@@ -31,7 +31,7 @@ class UserDatabase {
         try {
             con = DriverManager.getConnection(url, user, password);
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
+            //(e.getMessage());
         }
         return con;
     }
@@ -52,7 +52,7 @@ class UserDatabase {
             statement.execute(sql);
         }
         catch (SQLException e) {
-            System.out.println(e.getMessage());
+            //(e.getMessage());
         }
     }
 

@@ -41,7 +41,7 @@ public class ProductService
         }
         else
         {
-            System.out.println("No command-line arguments provided.");
+            //("No command-line arguments provided.");
             System.exit(1);
         }
 
@@ -61,7 +61,7 @@ public class ProductService
 
         server.start();
 
-        System.out.println("Server started on port " + port);
+        //("Server started on port " + port);
     }
 
     /**
@@ -80,10 +80,10 @@ public class ProductService
         {
             try
             {
-		System.out.println(exchange.getRequestMethod());
+		//(exchange.getRequestMethod());
                 if ("POST".equals(exchange.getRequestMethod()))
                 {
-		    System.out.println("It's a POST");
+		    //("It's a POST");
                     //Initialize variables
                     String productData = getRequestBody(exchange);
                     JSONObject jsonObject = new JSONObject(productData);
@@ -129,7 +129,7 @@ public class ProductService
             String name, description;
             JSONObject responseBody = new JSONObject();
 
-	    System.out.println("Before everything");
+	    //("Before everything");
             if (jsonObject.has("id") && jsonObject.has("name") && jsonObject.has("description")
                     && jsonObject.has("price") && jsonObject.has("quantity")) {
 
@@ -139,16 +139,16 @@ public class ProductService
                 price = jsonObject.getFloat("price");
                 quantity = jsonObject.getInt("quantity");
 
-		System.out.println("Entered first if statement");
+		//("Entered first if statement");
                 int createStatus = productDB.createProduct(id, name, description, price, quantity);
                 if (createStatus == 200) {
-		    System.out.println("Entered second if statement");
+		    //("Entered second if statement");
                     responseBody.put("id", id);
                     responseBody.put("name", name);
                     responseBody.put("description", description);
                     responseBody.put("price", price);
                     responseBody.put("quantity", quantity);
-		    System.out.println(responseBody.toString());
+		    //(responseBody.toString());
                     sendResponse(exchange, createStatus, responseBody.toString());
                 } else {
                     sendResponse(exchange, createStatus, new JSONObject().toString());

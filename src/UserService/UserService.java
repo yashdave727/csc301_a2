@@ -42,7 +42,7 @@ public class UserService
         }
         else
         {
-            System.out.println("No command-line arguments provided.");
+            //("No command-line arguments provided.");
             System.exit(1);
         }
 
@@ -61,7 +61,7 @@ public class UserService
 
         server.start();
 
-        System.out.println("Server started on port " + port);
+        //("Server started on port " + port);
 
     }
 
@@ -100,7 +100,7 @@ public class UserService
                         case "delete":
                             delete(exchange, jsonObject); break;
                         default:
-			    System.out.println("HELLO 103");
+			    //("HELLO 103");
                             sendResponse(exchange, 400, new JSONObject().toString()); break;
                     }
                 }
@@ -108,7 +108,7 @@ public class UserService
             catch (Exception e)
             {
                 e.printStackTrace();
-		System.out.println("HELLO 111");
+		//("HELLO 111");
                 //If any weird error occurs, then UserService has received a bad http request
                 sendResponse(exchange, 400, new JSONObject().toString());
             }
@@ -127,7 +127,7 @@ public class UserService
         try {
             // Check if all required fields are present, including the ID
             if (!jsonObject.has("id") || !jsonObject.has("username") || !jsonObject.has("email") || !jsonObject.has("password")) {
-                System.out.println("HELLO 130");
+                //("HELLO 130");
 		sendResponse(exchange, 400, new JSONObject().toString());
                 return;
             }
@@ -154,8 +154,8 @@ public class UserService
                 sendResponse(exchange, 409, new JSONObject().toString());
             }
         } catch (Exception e) {
-            e.printStackTrace();
-            System.out.println("HELLO 158");
+            // e.printStackTrace();
+            //("HELLO 158");
 	    sendResponse(exchange, 400, new JSONObject().toString());
         }
     }
@@ -191,14 +191,14 @@ public class UserService
                     sendResponse(exchange, updateStatus, new JSONObject().toString());
                 }
             } else {
-		System.out.println("HELLO (In Order Service Update)");
+		//("HELLO (In Order Service Update)");
                 sendResponse(exchange, 400, new JSONObject().toString());
             }
         }
         catch (Exception e)
         {
             e.printStackTrace();
-	    System.out.println("HELLO (In Order Service Update, it errors)");
+	    //("HELLO (In Order Service Update, it errors)");
             //If any weird error occurs, then UserService has received a bad http request
             sendResponse(exchange, 400, new JSONObject().toString());
         }
@@ -234,13 +234,13 @@ public class UserService
             }
             // The fields provided are invalid
             else {
-		System.out.println("HELLO (In Order Service Delete, invalid fields)");
+		//("HELLO (In Order Service Delete, invalid fields)");
                 sendResponse(exchange, 400, new JSONObject().toString());
             }
         }
         catch (Exception e)
         {
-	    System.out.println("HELLO (In Order Service delete, it errors)");
+	    //("HELLO (In Order Service delete, it errors)");
             //If any weird error occurs, then UserService has received a bad http request
             sendResponse(exchange, 400, new JSONObject().toString());
         }

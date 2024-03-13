@@ -60,7 +60,7 @@ public class OrderService
 
         server.start();
 
-        System.out.println("Server started on port " + port);
+        //("Server started on port " + port);
     }
 
     /**
@@ -190,11 +190,11 @@ public class OrderService
                         if (pathParts.length != 3)
                         {
                             // Bad request
-			    System.out.println("Hello from orderservice case GET");
+			    //("Hello from orderservice case GET");
                             sendResponse(exchange, 400, new JSONObject().toString());
                             return;
                         }
-			System.out.println("pathParts.length");
+			//("pathParts.length");
                         endpoint = "/user/"+pathParts[2];
                         command = "get";
                         break;
@@ -211,8 +211,8 @@ public class OrderService
             catch (Exception e)
             {
                 //If we get a weird error, it's a bad HTTP request
-		System.out.println(e);
-		System.out.println("Hello from orderservice, it errors: 214");
+		//(e);
+		//("Hello from orderservice, it errors: 214");
                 sendResponse(exchange, 400, new JSONObject().toString());
             }
             exchange.close();
@@ -271,7 +271,7 @@ public class OrderService
                             endpoint = "/product/"+pathParts[2];
                             command = "get";
                             
-			    System.out.println(url + endpoint);
+			    //(url + endpoint);
 			    
 			    break;
                     default:
@@ -302,20 +302,20 @@ public class OrderService
                 // Handle GET request for /user/purchased
                 if ("GET".equals(exchange.getRequestMethod()))
                 {
-		    System.out.println("In the GET if statement");
+		    //("In the GET if statement");
                     //Initialize variables
                     String URI = exchange.getRequestURI().toString();
                     int userID = Integer.parseInt(URI.substring(16));
 		    
-		    System.out.println("==== URI ====");
-		    System.out.println(URI);
+		    //("==== URI ====");
+		    //(URI);
 		    
-		    System.out.println("==== userID ====");
-		    System.out.println(userID);
+		    //("==== userID ====");
+		    //(userID);
                     
 		    String response = orderDB.getPurchased(userID);
-		    System.out.println("==== response ====");
-                    System.out.println(response);
+		    //("==== response ====");
+                    //(response);
 
                     if (response.equals("{}")) {
                         sendResponse(exchange, 404, new JSONObject().toString());

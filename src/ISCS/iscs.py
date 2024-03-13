@@ -36,7 +36,7 @@ def forward_request(endpoint):
     """
     # Get the next IP address for the given service
     next_ip = get_next_service_ip(endpoint)
-    print(endpoint, "post")
+#    print(endpoint, "post")
     # Debugging info
     if app.debug and next_ip:
         print(f"Forwarding request to {next_ip}/{endpoint}", file=sys.stderr)
@@ -47,7 +47,7 @@ def forward_request(endpoint):
         # Forward the request to the next service
         return redirect(f"{next_ip}/{endpoint}", code=307)
     # Invalid endpoint
-    print("TESTGET")
+#    print("TESTGET")
     return jsonify({"error": "ISCS Invalid endpoint"}), 400
 
 @app.route('/<endpoint>/<_id>', methods=['GET'])
@@ -60,7 +60,7 @@ def forward_request_with_id(endpoint, _id):
     # Get the next IP address for the given service
     next_ip = get_next_service_ip(endpoint)
 
-    print(endpoint, "get")
+#    print(endpoint, "get")
     # Debugging info
     if app.debug and next_ip:
         print(f"Forwarding request to {next_ip}/{endpoint}/{_id}", file=sys.stderr)
@@ -71,7 +71,7 @@ def forward_request_with_id(endpoint, _id):
         # Forward the request to the next service
         return redirect(f"{next_ip}/{endpoint}/{_id}", code=307)
     # Invalid endpoint
-    print("TESTGET")
+#    print("TESTGET")
     return jsonify({"error": "ISCS Invalid endpoint"}), 400
 
 # Error handling (defined in a for loop to avoid repetition)
@@ -83,7 +83,7 @@ for _code in error_codes:
     @app.errorhandler(_code)
     def error_handler(error, code=_code):
         """Error handler for the given error code."""
-        print("Error", error, file=sys.stderr)
+ #       print("Error", error, file=sys.stderr)
         return jsonify({"error": f"Error {code}"}), code
 
 # Helper functions
