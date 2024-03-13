@@ -3,6 +3,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.sql.*;
+import org.json.JSONObject;
 
 /**
  * OrderDatabase class provides methods for managing user data in a SQLite database.
@@ -87,7 +88,7 @@ class OrderDatabase {
                 return 409; // Duplicate entry
             }
             else {
-                return 500; // Internal Server Error
+                return 400; // Internal Server Error
             }
         }
     }
@@ -103,16 +104,21 @@ class OrderDatabase {
              PreparedStatement statement = con.prepareStatement(sql)) {
             statement.setInt(1, user_id);
             ResultSet current = statement.executeQuery();
-            String finalJSONString = "{";
+	    JSONObject finalJSON = new JSONObject();
             while (current.next()) {
-                int prodId = current.getInt("prod_id");
+                String prodId = Integer.toString(current.getInt("prod_id"));
                 int quantity = current.getInt("quantity");
-                finalJSONString += String.format("\"%d\": %d,", prodId, quantity);
+
+		if (finalJSON.has(prodId)) {
+			finalJSON.put(prodId, finalJSON.getInt(prodId) + quantity);
+		}
+		else {
+			finalJSON.put(prodId, quantity);
+		}
+
             }
 
-            finalJSONString = finalJSONString.substring(0, finalJSONString.length() - 1);
-            finalJSONString += "}";
-            return finalJSONString;
+            return finalJSON.toString();
         }
         catch (SQLException e) {
             return String.format("{\"error_message\": \"Get Order for user_id %d Did Not Work\"}", user_id);

@@ -40,7 +40,6 @@ public class OrderService
         }
         else
         {
-            System.out.println("No command-line arguments provided.");
             System.exit(1);
         }
 
@@ -115,15 +114,15 @@ public class OrderService
                     if (newQuantity < 0) {
                         // Send a 405 Method Not Allowed response for non-POST requests
                         sendResponse(exchange, 400, "{\"status\": \"Exceeded quantity limit\"}");
-                    }
+                    	return;
+		    }
 
-                    int statusCode = orderDB.placeOrder(userID, prodID, quantity, newQuantity);
+		    int statusCode = orderDB.placeOrder(userID, prodID, quantity, newQuantity);
 
-                    JSONObject jsonResponse = new JSONObject();
                     if (statusCode != 200) {
-                        jsonResponse.put("status", status_message);
+                        jsonObject.put("status", status_message);
                     } else {
-                        jsonResponse.put("status", "success!!!!!"); // TEST
+                        jsonObject.put("status", "Success"); // TEST
                     }
                     String response = jsonObject.toString();
                     sendResponse(exchange, statusCode, response);
@@ -170,14 +169,12 @@ public class OrderService
                 String endpoint = "";
                 String data = "";
 
-		System.out.println("idk");
                 // Create a parsable JSONObject from our response body's string
                 // JSONObject jsonObject = new JSONObject(data);
 
                 // Parse the command
                 String command = "";
 			
-		System.out.println("Jai");
 
                 switch (exchange.getRequestMethod())
                 {
@@ -186,7 +183,6 @@ public class OrderService
                         command = "post";
                         data = getRequestBody(exchange);
 			// JSONObject jsonObject = new JSONObject(data);
-			System.out.println(endpoint);
                         break;
                     case "GET":
                         String path = exchange.getRequestURI().getPath();
@@ -203,11 +199,9 @@ public class OrderService
                         command = "get";
                         break;
                     default:
-			System.out.println("Hello from orderservice case default");
                         sendResponse(exchange, 400, new JSONObject().toString());
                 }
 
-		System.out.println(url + endpoint);
                 // Send an HTTP Request to another server, collect the response
                 ResponseTuple tuple = OrderService.sendHTTPRequest(url + endpoint, data, command);
 
@@ -255,10 +249,7 @@ public class OrderService
                 String endpoint = "";
                 String data = "";
 
-		System.out.println("idk");
-                String command = "";
-			
-		System.out.println("Jai");
+                String command = "";	
 
                 switch (exchange.getRequestMethod())
                 {
@@ -268,7 +259,7 @@ public class OrderService
                             data = getRequestBody(exchange);
                             break;
                     case "GET":
-                            String path = exchange.getRequestURI().getPath();
+			    String path = exchange.getRequestURI().getPath();
                             String[] pathParts = path.split("/");
                             if (pathParts.length != 3)
                             {
@@ -279,11 +270,13 @@ public class OrderService
 
                             endpoint = "/product/"+pathParts[2];
                             command = "get";
-                            break;
+                            
+			    System.out.println(url + endpoint);
+			    
+			    break;
                     default:
                             sendResponse(exchange, 400, new JSONObject().toString());
                 }
-		System.out.println(url+endpoint);
                 // Send an HTTP Request to another server, collect the response
                 ResponseTuple tuple = OrderService.sendHTTPRequest(url + endpoint, data, command);
 
@@ -309,16 +302,26 @@ public class OrderService
                 // Handle GET request for /user/purchased
                 if ("GET".equals(exchange.getRequestMethod()))
                 {
+		    System.out.println("In the GET if statement");
                     //Initialize variables
                     String URI = exchange.getRequestURI().toString();
                     int userID = Integer.parseInt(URI.substring(16));
-
-                    String response = orderDB.getPurchased(userID);
+		    
+		    System.out.println("==== URI ====");
+		    System.out.println(URI);
+		    
+		    System.out.println("==== userID ====");
+		    System.out.println(userID);
                     
-                    if (response.equals("}")) {
+		    String response = orderDB.getPurchased(userID);
+		    System.out.println("==== response ====");
+                    System.out.println(response);
+
+                    if (response.equals("{}")) {
                         sendResponse(exchange, 404, new JSONObject().toString());
                     }
                     else {
+
                         sendResponse(exchange, 200, response);
                     }
 

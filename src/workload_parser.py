@@ -56,6 +56,9 @@ def parse_and_send_request(url, line):
                 if data['command'] == "update":
                     # Only update the fields that are given
                     data = _update_fields_that_are_given(data, tokens)
+                elif data['command'] == "get":
+                    request_type = "GET"
+                    endpoint += "/" + data['id']
                 else:
                     # Otherwise all fields must be provided
                     data['username'] = tokens[3]
@@ -74,6 +77,9 @@ def parse_and_send_request(url, line):
                 elif data['command'] == "update":
                     # Only update the fields that are given
                     data = _update_fields_that_are_given(data, tokens)
+                elif data['command'] == "info":
+                    request_type = "GET"
+                    endpoint += "/" + data['id']
                 else:
                     # Otherwise all fields must be provided
                     data['name'] = tokens[3]
@@ -101,6 +107,7 @@ def parse_and_send_request(url, line):
 #
             case _:
                 print("error: unidentified token: " + tokens[0])
+        
 
     except IndexError:
         # continue when there are no more tokens left
@@ -109,6 +116,7 @@ def parse_and_send_request(url, line):
     #step 2.5: Convert id, user_id, product_id, quantity to int, convert price to float
     data = _convert_to_int_or_float(data)
 
+    # print(data, endpoint, request_type)
     #step 3: send http request to order_service
     send_http_request(url, endpoint, data, request_type)
     print("----------------------------------")

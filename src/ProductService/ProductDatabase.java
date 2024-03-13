@@ -190,7 +190,7 @@ public class ProductDatabase {
             }
         }
         catch (SQLException e) {
-            return 400; // Internal Server Error
+            return 404; // Internal Server Error
         }
     }
 

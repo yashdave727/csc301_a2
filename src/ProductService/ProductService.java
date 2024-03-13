@@ -156,7 +156,7 @@ public class ProductService
             }
             // The fields provided are invalid
             else {
-                sendResponse(exchange, 497, new JSONObject().toString());
+                sendResponse(exchange, 400, new JSONObject().toString());
             }
         }
         catch (Exception e)
@@ -205,7 +205,7 @@ public class ProductService
         catch (Exception e)
         {
             //If any weird error occurs, then ProductService has received a bad http request
-            sendResponse(exchange, 400, new JSONObject().toString());
+            sendResponse(exchange, 404, new JSONObject().toString());
         }
     }
 
