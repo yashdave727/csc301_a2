@@ -40,7 +40,6 @@ public class OrderService
         }
         else
         {
-            System.out.println("No command-line arguments provided.");
             System.exit(1);
         }
 
@@ -107,19 +106,24 @@ public class OrderService
 
                     if (orderDB.getUser(userID).equals("") || orderDB.getProduct(prodID).equals("")) {
                         // Send a 405 Method Not Allowed response for non-POST requests
-                        sendResponse(exchange, 405, "{\"status\": \"Invalid Request\"}");
+                        sendResponse(exchange, 400, "{\"status\": \"Invalid Request\"}");
                     }
 
                     JSONObject product = new JSONObject(orderDB.getProduct(prodID));
-                    if (product.getInt("quantity") - quantity < 0) {
+                    int newQuantity = product.getInt("quantity") - quantity;
+                    if (newQuantity < 0) {
                         // Send a 405 Method Not Allowed response for non-POST requests
-                        sendResponse(exchange, 405, "{\"status\": \"Exceeded quantity limit\"}");
+                        sendResponse(exchange, 400, "{\"status\": \"Exceeded quantity limit\"}");
+                    	return;
+		    }
+
+		    int statusCode = orderDB.placeOrder(userID, prodID, quantity, newQuantity);
+
+                    if (statusCode != 200) {
+                        jsonObject.put("status", status_message);
+                    } else {
+                        jsonObject.put("status", "Success"); // TEST
                     }
-
-                    int statusCode = orderDB.placeOrder(userID, prodID, quantity);
-
-                    JSONObject jsonResponse = new JSONObject();
-                    jsonResponse.put("status", status_message);
                     String response = jsonObject.toString();
                     sendResponse(exchange, statusCode, response);
                 }
@@ -166,10 +170,11 @@ public class OrderService
                 String data = "";
 
                 // Create a parsable JSONObject from our response body's string
-                JSONObject jsonObject = new JSONObject(data);
+                // JSONObject jsonObject = new JSONObject(data);
 
                 // Parse the command
-                String command = jsonObject.getString("command");
+                String command = "";
+			
 
                 switch (exchange.getRequestMethod())
                 {
@@ -177,6 +182,7 @@ public class OrderService
                         endpoint = "/user";
                         command = "post";
                         data = getRequestBody(exchange);
+			// JSONObject jsonObject = new JSONObject(data);
                         break;
                     case "GET":
                         String path = exchange.getRequestURI().getPath();
@@ -184,10 +190,11 @@ public class OrderService
                         if (pathParts.length != 3)
                         {
                             // Bad request
+			    System.out.println("Hello from orderservice case GET");
                             sendResponse(exchange, 400, new JSONObject().toString());
                             return;
                         }
-
+			System.out.println("pathParts.length");
                         endpoint = "/user/"+pathParts[2];
                         command = "get";
                         break;
@@ -204,6 +211,8 @@ public class OrderService
             catch (Exception e)
             {
                 //If we get a weird error, it's a bad HTTP request
+		System.out.println(e);
+		System.out.println("Hello from orderservice, it errors: 214");
                 sendResponse(exchange, 400, new JSONObject().toString());
             }
             exchange.close();
@@ -240,11 +249,7 @@ public class OrderService
                 String endpoint = "";
                 String data = "";
 
-                // Create a parsable JSONObject from our response body's string
-                JSONObject jsonObject = new JSONObject(data);
-
-                // Parse the command
-                String command = jsonObject.getString("command");
+                String command = "";	
 
                 switch (exchange.getRequestMethod())
                 {
@@ -254,7 +259,7 @@ public class OrderService
                             data = getRequestBody(exchange);
                             break;
                     case "GET":
-                            String path = exchange.getRequestURI().getPath();
+			    String path = exchange.getRequestURI().getPath();
                             String[] pathParts = path.split("/");
                             if (pathParts.length != 3)
                             {
@@ -265,11 +270,13 @@ public class OrderService
 
                             endpoint = "/product/"+pathParts[2];
                             command = "get";
-                            break;
+                            
+			    System.out.println(url + endpoint);
+			    
+			    break;
                     default:
                             sendResponse(exchange, 400, new JSONObject().toString());
                 }
-
                 // Send an HTTP Request to another server, collect the response
                 ResponseTuple tuple = OrderService.sendHTTPRequest(url + endpoint, data, command);
 
@@ -295,16 +302,26 @@ public class OrderService
                 // Handle GET request for /user/purchased
                 if ("GET".equals(exchange.getRequestMethod()))
                 {
+		    System.out.println("In the GET if statement");
                     //Initialize variables
                     String URI = exchange.getRequestURI().toString();
                     int userID = Integer.parseInt(URI.substring(16));
-
-                    String response = orderDB.getPurchased(userID);
+		    
+		    System.out.println("==== URI ====");
+		    System.out.println(URI);
+		    
+		    System.out.println("==== userID ====");
+		    System.out.println(userID);
                     
-                    if (response.equals("}")) {
+		    String response = orderDB.getPurchased(userID);
+		    System.out.println("==== response ====");
+                    System.out.println(response);
+
+                    if (response.equals("{}")) {
                         sendResponse(exchange, 404, new JSONObject().toString());
                     }
                     else {
+
                         sendResponse(exchange, 200, response);
                     }
 
