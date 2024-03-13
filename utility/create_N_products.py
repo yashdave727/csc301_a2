@@ -1,3 +1,4 @@
+#!/bin/python3
 '''
 create_N_products.py
 This script is used to create N products in the system.

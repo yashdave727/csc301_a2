@@ -1,3 +1,4 @@
+#!/bin/python3
 '''
 create_N_users.py
 This script is used to create N users in the system.
