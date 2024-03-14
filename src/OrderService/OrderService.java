@@ -95,14 +95,14 @@ public class OrderService
                     //Initialize variables
                     String orderData = OrderService.getRequestBody(exchange);
                     JSONObject jsonObject = new JSONObject(orderData);
-                    String status_message = "Invalid Request";
 
                     //Verify that all fields are present for creation
                     if (!(jsonObject.has("product_id")
                             && jsonObject.has("user_id")
                             && jsonObject.has("quantity")))
                     {
-                        sendResponse(exchange, 400, "{\"status\": \"Invalid Request\"}");
+			jsonObject.put("status", "Invalid Request");
+                        sendResponse(exchange, 400, jsonObject.toString());
                         exchange.close();
                         return;
                     }
@@ -113,21 +113,23 @@ public class OrderService
 
                     if (orderDB.getUser(userID).equals("") || orderDB.getProduct(prodID).equals("")) {
                         // Send a 405 Method Not Allowed response for non-POST requests
-                        sendResponse(exchange, 400, "{\"status\": \"Invalid Request\"}");
+			jsonObject.put("status", "Invalid Request");
+                        sendResponse(exchange, 400, jsonObject.toString());
                     }
 
                     JSONObject product = new JSONObject(orderDB.getProduct(prodID));
                     int newQuantity = product.getInt("quantity") - quantity;
                     if (newQuantity < 0) {
                         // Send a 405 Method Not Allowed response for non-POST requests
-                        sendResponse(exchange, 400, "{\"status\": \"Exceeded quantity limit\"}");
+			jsonObject.put("status", "Invalid Request");
+			sendResponse(exchange, 400, jsonObject.toString());
                     	return;
 		    }
 
 		    int statusCode = orderDB.placeOrder(userID, prodID, quantity, newQuantity);
 
                     if (statusCode != 200) {
-                        jsonObject.put("status", status_message);
+                        jsonObject.put("status", "Invalid Request");
                     } else {
                         jsonObject.put("status", "Success"); // TEST
                     }
