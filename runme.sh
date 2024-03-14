@@ -66,11 +66,15 @@ start_wg() {
 # Function to start the ISCS
 start_iscs() {
 	ISCS_PORT=$1
-	python3 "$script_dir/compiled/ISCS/iscs.py" "$ISCS_PORT" "-d"
+	if [ -z "$ISCS_PORT" ]; then
+		python3 "$script_dir/compiled/ISCS/iscs.py"
+	fi
+	python3 "$script_dir/compiled/ISCS/iscs.py" "$ISCS_PORT"
 }
 
+# Function to start the database
 start_db() {
-	./runme_db.sh
+	bash "$script_dir/database/runme_db.sh"
 }
 
 # Main script
@@ -85,7 +89,7 @@ case "$1" in
         start_ps "$2"
         ;;
     -i)
-        start_iscs "$2"
+	start_iscs "$2"
         ;;
     -o)
         start_os "$2" "$3" "$4"
