@@ -43,7 +43,10 @@ start_us() {
 start_ps() {
 	# Run the product service with the product port
 	PRODUCT_PORT=$1
-	java -cp "$script_dir/compiled/ProductService:$script_dir/compiled/json-20231013.jar:$script_dir/compiled/postgresql-42.7.2.jar" ProductService "$PRODUCT_PORT"
+	DOCKER_IP=$2
+	DB_PORT=$3
+	RD_PORT=$4
+	java -cp "$script_dir/compiled/ProductService:$script_dir/compiled/json-20231013.jar:$script_dir/compiled/postgresql-42.7.2.jar" ProductService "$PRODUCT_PORT" "$DOCKER_IP" "$DB_PORT" "$RD_PORT"
 }
 
 # Function to start the OrderService
@@ -86,10 +89,10 @@ case "$1" in
         compile_code
         ;;
     -u)
-        start_us "$2"
+        start_us "$2" "$3" "$4" "$5"
         ;;
     -p)
-        start_ps "$2"
+        start_ps "$2" "$3" "$4" "$5"
         ;;
     -i)
 	start_iscs "$2"
