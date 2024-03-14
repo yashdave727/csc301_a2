@@ -33,8 +33,8 @@ public class UserService
     public static void main(String[] args) throws IOException
     {
         String ip = "0.0.0.0";
-	String dockerIp;
-        int port, dbPort, redisPort;
+	String dockerIp, dbPort, redisPort;
+        int port;
 
         // Get port to listen on
 	// Get docker ip
@@ -48,8 +48,8 @@ public class UserService
 
         port = Integer.parseInt(args[0]);
 	dockerIp = args[1];
-	dbPort = Integer.parseInt(args[2]);
-	redisPort = Integer.parseInt(args[3]);
+	dbPort = args[2];
+	redisPort = args[3];
 
         HttpServer server = HttpServer.create(new InetSocketAddress(ip, port), 0);
         // Example: Set a custom executor with a fixed-size thread pool
@@ -62,6 +62,9 @@ public class UserService
         server.createContext("/user/", new GetHandler());
 
         server.setExecutor(null); // creates a default executor
+
+	// Initialize the database
+	userDB.initialize(dockerIp, dbPort, redisPort);
 
         server.start();
 

@@ -10,7 +10,7 @@ import java.sql.*;
 
 class UserDatabase {
 
-    private String url = "jdbc:postgresql://142.1.44.57:5432/assignmentdb";
+    public static String url = "jdbc:postgresql://142.1.44.57:5432/assignmentdb";
     private final String user = "assignmentuser";
     private final String password = "assignmentpassword";
 
