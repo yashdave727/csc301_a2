@@ -65,7 +65,10 @@ public class UserService
 
         server.start();
 
-        //("Server started on port " + port);
+        System.out.println("UserService is listening on port " + port);
+	System.out.println("Docker IP: " + dockerIp);
+	System.out.println("DB Port: " + dbPort);
+	System.out.println("Redis Port: " + redisPort);
 
     }
 
