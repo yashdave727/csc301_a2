@@ -15,12 +15,6 @@ compile_code() {
     cp "$script_dir/src/json-20231013.jar" "$script_dir/compiled/"
     cp "$script_dir/src/postgresql-42.7.2.jar" "$script_dir/compiled/"
 
-    # Create databases
-    echo '[]' > "$script_dir/compiled/UserService/user_backup.json"
-    echo '[]' > "$script_dir/compiled/UserService/user_database.json"
-    echo '[]' > "$script_dir/compiled/ProductService/product_backup.json"
-    echo '[]' > "$script_dir/compiled/ProductService/product_database.json"
-
     if [ "$?" -eq 0 ]; then
         echo "Compilation successful."
     else
