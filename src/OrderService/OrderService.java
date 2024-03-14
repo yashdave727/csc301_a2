@@ -87,14 +87,26 @@ public class OrderService
         @Override
         public void handle(HttpExchange exchange) throws IOException
         {
+            //Initialize variables
+            String orderData = OrderService.getRequestBody(exchange);
+            JSONObject jsonObject = new JSONObject(orderData);
             try
             {
+
                 // Handle POST request for /order
                 if ("POST".equals(exchange.getRequestMethod()))
                 {
-                    //Initialize variables
-                    String orderData = OrderService.getRequestBody(exchange);
-                    JSONObject jsonObject = new JSONObject(orderData);
+
+		    // Check that the command is "place order"
+		    if (!jsonObject.has("command") || !jsonObject.getString("command").equals("place order")) {
+			jsonObject.put("status", "Invalid Request");
+			// Remove the command from the JSON object
+			jsonObject.remove("command");
+			sendResponse(exchange, 400, jsonObject.toString());
+		    }
+		    // Remove the command from the JSON object
+		    jsonObject.remove("command");
+
 
                     //Verify that all fields are present for creation
                     if (!(jsonObject.has("product_id")
@@ -141,7 +153,8 @@ public class OrderService
             catch (Exception e)
             {
                 // If something weird happens, we send a 400 error code representing an invalid HTTP request
-                sendResponse(exchange, 400, "{\"status\": \"Invalid Request\"}");
+		jsonObject.put("status", "Invalid Request");
+                sendResponse(exchange, 400, jsonObject.toString());
             }
             exchange.close();
         }
