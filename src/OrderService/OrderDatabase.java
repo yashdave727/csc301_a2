@@ -11,17 +11,10 @@ import org.json.JSONObject;
 
 class OrderDatabase {
 
-    private static final String url = "jdbc:postgresql://142.1.46.61:5434/assignmentdb";
+    public static String url = "jdbc:postgresql://142.1.44.57:5432/assignmentdb";
     private static final String user = "assignmentuser";
     private static final String password = "assignmentpassword";
 
-
-    /**
-     * Constructor for the UserDatabase. This method initializes the database using the initialize().
-     */
-    public OrderDatabase() {
-        initialize();
-    }
 
     /**
      * The connect method is used to establish a connection to the SQLite database.
@@ -30,9 +23,10 @@ class OrderDatabase {
     private Connection connect() {
         Connection con = null;
         try {
+	    // TODO: Add REDIS connection
             con = DriverManager.getConnection(url, user, password);
         } catch (SQLException e) {
-            //(e.getMessage());
+            System.out.println(e.getMessage());
         }
         return con;
     }
@@ -41,7 +35,8 @@ class OrderDatabase {
      * The initialize method which is used in the constructor is for initializing the database by creating a table
      * for users if it does not already exist.
      */
-    public void initialize() {
+    public void initialize(String dockerIp, String dbPort, String redisPort) {
+	url = "jdbc:postgresql://" + dockerIp + ":" + dbPort + "/assignmentdb";
         try (Connection con = connect();
             Statement statement = con.createStatement()) {
             String sql = "CREATE TABLE IF NOT EXISTS orders (" +
@@ -52,11 +47,11 @@ class OrderDatabase {
                     "FOREIGN KEY (user_id) REFERENCES users(id) " +
                     "ON DELETE CASCADE, " +
                     "FOREIGN KEY (prod_id) REFERENCES products(id) " +
-                    "ON DELETE CASCADE)";
+                    "ON DELETE CASCADE)"; // TODO: This is not supposed to cascade (we want to see deleted users order history)
             statement.execute(sql);
         }
         catch (SQLException e) {
-            //(e.getMessage());
+	    System.out.println(e.getMessage());
         }
     }
 

@@ -27,25 +27,29 @@ public class UserService
     /**
      * The main method for the UserService application. Starts an HTTP server to handle user-related requests.
      *
-     * @param args Command-line arguments. Expects an absolute working directory path as the first argument.
+     * @param args Command-line arguments. The first argument is the port number to listen on. The second argument is the IP address of the Docker container running the database. The third argument is the port number of the database. The fourth argument is the port number of the Redis server.
      * @throws IOException If an I/O error occurs during the initialization or execution of the server.
      */
     public static void main(String[] args) throws IOException
     {
         String ip = "0.0.0.0";
-        int port = -1;
+	String dockerIp, dbPort, redisPort;
+        int port;
 
-        // Get port from the command line
-        if (args.length > 0)
+        // Get port to listen on
+	// Get docker ip
+	// Get db port
+	// Get redis port
+	if (args.length != 4)
         {
-            port = Integer.parseInt(args[0]);
-        }
-        else
-        {
-            //("No command-line arguments provided.");
+            System.out.println("Missing arguments <port> <dockerIp> <dbPort> <redisPort>");
             System.exit(1);
         }
 
+        port = Integer.parseInt(args[0]);
+	dockerIp = args[1];
+	dbPort = args[2];
+	redisPort = args[3];
 
         HttpServer server = HttpServer.create(new InetSocketAddress(ip, port), 0);
         // Example: Set a custom executor with a fixed-size thread pool
@@ -59,9 +63,15 @@ public class UserService
 
         server.setExecutor(null); // creates a default executor
 
+	// Initialize the database with docker IP and ports
+	userDB.initialize(dockerIp, dbPort, redisPort);
+
         server.start();
 
-        //("Server started on port " + port);
+        System.out.println("UserService is listening on port " + port);
+	System.out.println("Docker IP: " + dockerIp);
+	System.out.println("DB Port: " + dbPort);
+	System.out.println("Redis Port: " + redisPort);
 
     }
 

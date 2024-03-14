@@ -29,20 +29,23 @@ public class OrderService
     public static void main(String[] args) throws IOException
     {
         String ip = "0.0.0.0";
-        int port = -1;
-        String ISCS_IP = "";
+	String dockerIp, dbPort, redisPort;
+        int port;
 
-        // Get Port and ISCS_IP from the command line
-        if (args.length > 1)
+        // Get port to listen on
+	// Get docker ip
+	// Get db port
+	// Get redis port
+	if (args.length != 4)
         {
-            ISCS_IP = args[1];
-            port = Integer.parseInt(args[0]);
-        }
-        else
-        {
+            System.out.println("Missing arguments <port> <dockerIp> <dbPort> <redisPort>");
             System.exit(1);
         }
 
+        port = Integer.parseInt(args[0]);
+	dockerIp = args[1];
+	dbPort = args[2];
+	redisPort = args[3];
         HttpServer server = HttpServer.create(new InetSocketAddress(ip, port), 0);
 
         // Example: Set a custom executor with a fixed-size thread pool
@@ -50,17 +53,21 @@ public class OrderService
 
         // Set up context for a POST request to the OrderService
         server.createContext("/order", new OrderHandler());
-        server.createContext("/user", new UserHandler(ISCS_IP));
-        server.createContext("/product", new ProductHandler(ISCS_IP));
 
         // Set up context for a Get request to the OrderService
         server.createContext("/user/purchased/", new PurchaseHandler());
 
         server.setExecutor(null); // creates a default executor
 
+	// Initialize the database with docker IP and ports
+	orderDB.initialize(dockerIp, dbPort, redisPort);
+
         server.start();
 
-        //("Server started on port " + port);
+	System.out.println("Order Service is running on port " + port);
+	System.out.println("Docker IP: " + dockerIp);
+	System.out.println("DB Port: " + dbPort);
+	System.out.println("Redis Port: " + redisPort);
     }
 
     /**
@@ -80,59 +87,76 @@ public class OrderService
         @Override
         public void handle(HttpExchange exchange) throws IOException
         {
+            //Initialize variables
+            String orderData = OrderService.getRequestBody(exchange);
+            JSONObject jsonObject = new JSONObject(orderData);
             try
             {
+
                 // Handle POST request for /order
-                if ("POST".equals(exchange.getRequestMethod()))
+                if (!"POST".equals(exchange.getRequestMethod()))
+		{
+		    // Send a 405 Method Not Allowed response for non-POST requests
+		    jsonObject.put("status", "Invalid Request");
+		    sendResponse(exchange, 405, jsonObject.toString());
+		}
+		// Check that the command is "place order"
+		if (!jsonObject.has("command") || !jsonObject.getString("command").equals("place order")) {
+			jsonObject.put("status", "Invalid Request");
+			// Remove the command from the JSON object
+			jsonObject.remove("command");
+			sendResponse(exchange, 400, jsonObject.toString());
+		}
+		// Remove the command from the JSON object
+		jsonObject.remove("command");
+
+
+                //Verify that all fields are present for creation
+                if (!(jsonObject.has("product_id")
+			&& jsonObject.has("user_id")
+                        && jsonObject.has("quantity")))
                 {
-                    //Initialize variables
-                    String orderData = OrderService.getRequestBody(exchange);
-                    JSONObject jsonObject = new JSONObject(orderData);
-                    String status_message = "Invalid Request";
-
-                    //Verify that all fields are present for creation
-                    if (!(jsonObject.has("product_id")
-                            && jsonObject.has("user_id")
-                            && jsonObject.has("quantity")))
-                    {
-                        sendResponse(exchange, 400, "{\"status\": \"Invalid Request\"}");
-                        exchange.close();
-                        return;
-                    }
-
-                    int userID = jsonObject.getInt("user_id");
-                    int prodID = jsonObject.getInt("product_id");
-                    int quantity = jsonObject.getInt("quantity");
-
-                    if (orderDB.getUser(userID).equals("") || orderDB.getProduct(prodID).equals("")) {
-                        // Send a 405 Method Not Allowed response for non-POST requests
-                        sendResponse(exchange, 400, "{\"status\": \"Invalid Request\"}");
-                    }
-
-                    JSONObject product = new JSONObject(orderDB.getProduct(prodID));
-                    int newQuantity = product.getInt("quantity") - quantity;
-                    if (newQuantity < 0) {
-                        // Send a 405 Method Not Allowed response for non-POST requests
-                        sendResponse(exchange, 400, "{\"status\": \"Exceeded quantity limit\"}");
-                    	return;
-		    }
-
-		    int statusCode = orderDB.placeOrder(userID, prodID, quantity, newQuantity);
-
-                    if (statusCode != 200) {
-                        jsonObject.put("status", status_message);
-                    } else {
-                        jsonObject.put("status", "Success"); // TEST
-                    }
-                    String response = jsonObject.toString();
-                    sendResponse(exchange, statusCode, response);
+		jsonObject.put("status", "Invalid Request");
+                sendResponse(exchange, 400, jsonObject.toString());
+                exchange.close();
+                return;
                 }
-            
+
+                int userID = jsonObject.getInt("user_id");
+                int prodID = jsonObject.getInt("product_id");
+                int quantity = jsonObject.getInt("quantity");
+
+                if (orderDB.getUser(userID).equals("") || orderDB.getProduct(prodID).equals("")) {
+			// Send a 405 Method Not Allowed response for non-POST requests
+			jsonObject.put("status", "Invalid Request");
+                        sendResponse(exchange, 400, jsonObject.toString());
+                }
+
+                JSONObject product = new JSONObject(orderDB.getProduct(prodID));
+                int newQuantity = product.getInt("quantity") - quantity;
+                if (newQuantity < 0) {
+                        // Send a 405 Method Not Allowed response for non-POST requests
+			jsonObject.put("status", "Invalid Request");
+			sendResponse(exchange, 400, jsonObject.toString());
+                    	return;
+		}
+
+		int statusCode = orderDB.placeOrder(userID, prodID, quantity, newQuantity);
+
+                if (statusCode != 200) {
+                        jsonObject.put("status", "Invalid Request");
+                } else {
+                        jsonObject.put("status", "Success"); // TEST
+                }
+                String response = jsonObject.toString();
+                sendResponse(exchange, statusCode, response);
+
             }
             catch (Exception e)
             {
                 // If something weird happens, we send a 400 error code representing an invalid HTTP request
-                sendResponse(exchange, 400, "{\"status\": \"Invalid Request\"}");
+		jsonObject.put("status", "Invalid Request");
+                sendResponse(exchange, 400, jsonObject.toString());
             }
             exchange.close();
         }
@@ -174,7 +198,7 @@ public class OrderService
 
                 // Parse the command
                 String command = "";
-			
+
 
                 switch (exchange.getRequestMethod())
                 {
@@ -249,7 +273,7 @@ public class OrderService
                 String endpoint = "";
                 String data = "";
 
-                String command = "";	
+                String command = "";
 
                 switch (exchange.getRequestMethod())
                 {
@@ -270,9 +294,9 @@ public class OrderService
 
                             endpoint = "/product/"+pathParts[2];
                             command = "get";
-                            
+
 			    //(url + endpoint);
-			    
+
 			    break;
                     default:
                             sendResponse(exchange, 400, new JSONObject().toString());
@@ -306,13 +330,13 @@ public class OrderService
                     //Initialize variables
                     String URI = exchange.getRequestURI().toString();
                     int userID = Integer.parseInt(URI.substring(16));
-		    
+
 		    //("==== URI ====");
 		    //(URI);
-		    
+
 		    //("==== userID ====");
 		    //(userID);
-                    
+
 		    String response = orderDB.getPurchased(userID);
 		    //("==== response ====");
                     //(response);
@@ -424,10 +448,19 @@ public class OrderService
      */
     public static void sendResponse(HttpExchange exchange, int rCode, String response) throws IOException
     {
-        exchange.sendResponseHeaders(rCode, response.length());
-        OutputStream os = exchange.getResponseBody();
-        os.write(response.getBytes(StandardCharsets.UTF_8));
-        os.close();
+        // Convert the response String to bytes to correctly measure its length in bytes
+        byte[] responseBytes = response.getBytes(StandardCharsets.UTF_8);
+
+        // Set the necessary response headers before sending the response body
+        exchange.getResponseHeaders().set("Content-Type", "application/json; charset=UTF-8");
+
+        // Correctly set the content length using the byte length of the response
+        exchange.sendResponseHeaders(rCode, responseBytes.length);
+
+        // Write the response bytes and close the OutputStream
+        try (OutputStream os = exchange.getResponseBody()) {
+            os.write(responseBytes);
+        }
     }
 
     /**

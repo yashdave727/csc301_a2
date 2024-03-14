@@ -32,19 +32,23 @@ public class ProductService
     public static void main(String[] args) throws IOException
     {
         String ip = "0.0.0.0";
-        int port = -1;
+	String dockerIp, dbPort, redisPort;
+        int port;
 
-        // Get port from the command line
-        if (args.length > 0)
+        // Get port to listen on
+	// Get docker ip
+	// Get db port
+	// Get redis port
+	if (args.length != 4)
         {
-            port = Integer.parseInt(args[0]);
-        }
-        else
-        {
-            //("No command-line arguments provided.");
+            System.out.println("Missing arguments <port> <dockerIp> <dbPort> <redisPort>");
             System.exit(1);
         }
 
+        port = Integer.parseInt(args[0]);
+	dockerIp = args[1];
+	dbPort = args[2];
+	redisPort = args[3];
 
         HttpServer server = HttpServer.create(new InetSocketAddress(ip, port), 0);
         // Example: Set a custom executor with a fixed-size thread pool
@@ -56,12 +60,18 @@ public class ProductService
         // Set up context for a GET request
         server.createContext("/product/", new GetHandler());
 
-
         server.setExecutor(null); // creates a default executor
+
+	// Initialize the database with docker IP and ports
+	productDB.initialize(dockerIp, dbPort, redisPort);
 
         server.start();
 
-        //("Server started on port " + port);
+	System.out.println("Product Service is running on port " + port);
+	System.out.println("Docker IP: " + dockerIp);
+	System.out.println("DB Port: " + dbPort);
+	System.out.println("Redis Port: " + redisPort);
+
     }
 
     /**
@@ -288,7 +298,6 @@ public class ProductService
                 //If any weird error occurs, then ProductService has received a bad http request
                 sendResponse(exchange, 400, new JSONObject().toString());
             }
-            exchange.close();
         }
     }
 
@@ -302,10 +311,23 @@ public class ProductService
      */
     public static void sendResponse(HttpExchange exchange, int rCode, String response) throws IOException
     {
-        exchange.sendResponseHeaders(rCode, response.length());
-        OutputStream os = exchange.getResponseBody();
-        os.write(response.getBytes(StandardCharsets.UTF_8));
-        os.close();
+//        exchange.sendResponseHeaders(rCode, response.length());
+//        OutputStream os = exchange.getResponseBody();
+//        os.write(response.getBytes(StandardCharsets.UTF_8));
+//        os.close();
+        // Convert the response String to bytes to correctly measure its length in bytes
+        byte[] responseBytes = response.getBytes(StandardCharsets.UTF_8);
+
+        // Set the necessary response headers before sending the response body
+        exchange.getResponseHeaders().set("Content-Type", "application/json; charset=UTF-8");
+
+        // Correctly set the content length using the byte length of the response
+        exchange.sendResponseHeaders(rCode, responseBytes.length);
+
+        // Write the response bytes and close the OutputStream
+        try (OutputStream os = exchange.getResponseBody()) {
+            os.write(responseBytes);
+        }
     }
 
     /**
