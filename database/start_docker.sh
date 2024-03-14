@@ -17,7 +17,7 @@ fi
 
 
 # Build postgres, Build redis
-docker build -t assignmentpostgres .
+docker build -t assignmentpostgres ./postgres/
 docker build -t assignmentredis ./redis/
 
 # Run postgres
