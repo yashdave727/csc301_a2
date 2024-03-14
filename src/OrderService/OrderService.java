@@ -162,160 +162,7 @@ public class OrderService
         }
     }
 
-    /**
-     * A custom HTTP handler for processing requests related to user management.
-     * Implements the HttpHandler interface to handle HTTP exchanges.
-     * This class is responsible for handling various user-related commands, such as create, delete, update, and get.
-     */
-    static class UserHandler implements HttpHandler
-    {
-
-        String uri;
-
-        public UserHandler(String s)
-        {
-            this.uri = s;
-        }
-
-        /**
-         * Handles the incoming HTTP exchange, processing requests related to user management.
-         *
-         * @param exchange The HttpExchange object representing the HTTP request and response.
-         * @throws IOException If an I/O error occurs while handling the request.
-         */
-        @Override
-        public void handle(HttpExchange exchange) throws IOException
-        {
-            try
-            {
-                // Initialize variables
-                String url = this.uri;
-                String endpoint = "";
-                String data = "";
-
-                // Create a parsable JSONObject from our response body's string
-                // JSONObject jsonObject = new JSONObject(data);
-
-                // Parse the command
-                String command = "";
-
-
-                switch (exchange.getRequestMethod())
-                {
-                    case "POST":
-                        endpoint = "/user";
-                        command = "post";
-                        data = getRequestBody(exchange);
-			// JSONObject jsonObject = new JSONObject(data);
-                        break;
-                    case "GET":
-                        String path = exchange.getRequestURI().getPath();
-                        String[] pathParts = path.split("/");
-                        if (pathParts.length != 3)
-                        {
-                            // Bad request
-			    //("Hello from orderservice case GET");
-                            sendResponse(exchange, 400, new JSONObject().toString());
-                            return;
-                        }
-			//("pathParts.length");
-                        endpoint = "/user/"+pathParts[2];
-                        command = "get";
-                        break;
-                    default:
-                        sendResponse(exchange, 400, new JSONObject().toString());
-                }
-
-                // Send an HTTP Request to another server, collect the response
-                ResponseTuple tuple = OrderService.sendHTTPRequest(url + endpoint, data, command);
-
-                // Send the response back to the client
-                sendResponse(exchange, tuple.getStatus_code(), tuple.getResponse());
-            }
-            catch (Exception e)
-            {
-                //If we get a weird error, it's a bad HTTP request
-		//(e);
-		//("Hello from orderservice, it errors: 214");
-                sendResponse(exchange, 400, new JSONObject().toString());
-            }
-            exchange.close();
-        }
-    }
-
-    /**
-     * A custom HTTP handler for processing requests related to product management.
-     * Implements the HttpHandler interface to handle HTTP exchanges.
-     * This class is responsible for handling various product-related commands, such as create, update, delete, and info.
-     */
-    static class ProductHandler implements HttpHandler
-    {
-        String uri;
-
-        public ProductHandler(String s)
-        {
-            this.uri = s;
-        }
-
-        /**
-         * Handles the incoming HTTP exchange, processing requests related to product management.
-         *
-         * @param exchange The HttpExchange object representing the HTTP request and response.
-         * @throws IOException If an I/O error occurs while handling the request.
-         */
-        @Override
-        public void handle(HttpExchange exchange) throws IOException
-        {
-            try
-            {
-                // Initialize variables
-                String url = this.uri;
-                String endpoint = "";
-                String data = "";
-
-                String command = "";
-
-                switch (exchange.getRequestMethod())
-                {
-                    case "POST":
-                            endpoint = "/product";
-                            command = "post";
-                            data = getRequestBody(exchange);
-                            break;
-                    case "GET":
-			    String path = exchange.getRequestURI().getPath();
-                            String[] pathParts = path.split("/");
-                            if (pathParts.length != 3)
-                            {
-                                // Bad request
-                                sendResponse(exchange, 400, new JSONObject().toString());
-                                return;
-                            }
-
-                            endpoint = "/product/"+pathParts[2];
-                            command = "get";
-
-			    //(url + endpoint);
-
-			    break;
-                    default:
-                            sendResponse(exchange, 400, new JSONObject().toString());
-                }
-                // Send an HTTP Request to another server, collect the response
-                ResponseTuple tuple = OrderService.sendHTTPRequest(url + endpoint, data, command);
-
-                // Send the response back to the client
-                sendResponse(exchange, tuple.getStatus_code(), tuple.getResponse());
-            }
-            catch (Exception e)
-            {
-                //If we get a weird error, it's a bad HTTP request
-                sendResponse(exchange, 400, new JSONObject().toString());
-            }
-            exchange.close();
-        }
-    }
-
+   
     static class PurchaseHandler implements HttpHandler
     {
         @Override
@@ -331,15 +178,7 @@ public class OrderService
                     String URI = exchange.getRequestURI().toString();
                     int userID = Integer.parseInt(URI.substring(16));
 
-		    //("==== URI ====");
-		    //(URI);
-
-		    //("==== userID ====");
-		    //(userID);
-
 		    String response = orderDB.getPurchased(userID);
-		    //("==== response ====");
-                    //(response);
 
                     if (response.equals("{}")) {
                         sendResponse(exchange, 404, new JSONObject().toString());
@@ -365,79 +204,7 @@ public class OrderService
         }
     }
 
-    /**
-     * Sends an HTTP request to the specified URL with the provided data and command.
-     *
-     * @param url The URL to which the HTTP request is sent.
-     * @param data The data to be included in the request body.
-     * @param command The command indicating the type of HTTP request (e.g., GET, POST).
-     * @return A ResponseTuple containing the response content and HTTP status code.
-     * @throws IOException If an I/O error occurs during the HTTP request.
-     * @throws URISyntaxException If the URL syntax is incorrect.
-     */
-    public static ResponseTuple sendHTTPRequest(String url, String data, String command) throws IOException, URISyntaxException {
-        // Create a URL object
-        URI serverUrl = new URI(url);
-
-        // Open a connection to the URL
-        HttpURLConnection connection = (HttpURLConnection) serverUrl.toURL().openConnection();
-
-        if (command.equals("get"))
-            connection.setRequestMethod("GET");
-        else
-        {
-            // Set the request method to POST otherwise
-            connection.setRequestMethod("POST");
-
-            // Enable input/output streams
-            connection.setDoOutput(true);
-
-            // Set the request body content type
-            connection.setRequestProperty("Content-Type", "application/json");
-
-            // Get the output stream of the connection
-            try (OutputStream os = connection.getOutputStream())
-            {
-                // Write the data to the output stream
-                os.write(data.getBytes(StandardCharsets.UTF_8));
-                os.flush();
-            }
-        }
-
-        return readResponse(connection);
-    }
-
-    /**
-     * Reads the response from an HttpURLConnection and constructs a ResponseTuple.
-     *
-     * @param con The HttpURLConnection from which to read the response.
-     * @return A ResponseTuple containing the response content and HTTP status code.
-     * @throws IOException If an I/O error occurs while reading the response.
-     */
-    public static ResponseTuple readResponse(HttpURLConnection con) throws IOException {
-        StringBuilder response = new StringBuilder();
-        int status_code = con.getResponseCode();
-        String output = "{}";
-
-        if (status_code == 200)
-        {
-            // Read the response content
-            try (BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()))) {
-                String inputLine;
-                while ((inputLine = in.readLine()) != null) {
-                    response.append(inputLine);
-                }
-            }
-            output = response.toString();
-        }
-
-
-        ResponseTuple tuple = new ResponseTuple(output, status_code);
-
-        con.disconnect();
-        return tuple;
-    }
-
+    
     /**
      * Sends an HTTP response with the specified response code and content.
      *
@@ -482,39 +249,5 @@ public class OrderService
             }
             return requestBody.toString();
         }
-    }
-
-    /**
-     * A simple class representing a tuple containing an HTTP response and its status code.
-     */
-    static class ResponseTuple {
-        String response;
-        int status_code;
-
-        /**
-         * Constructs a ResponseTuple with the given response content and HTTP status code.
-         *
-         * @param response The content of the HTTP response body.
-         * @param status_code The HTTP status code.
-         */
-        public ResponseTuple(String response, int status_code)
-        {
-            this.response = response;
-            this.status_code = status_code;
-        }
-
-        /**
-         * Gets the response content.
-         *
-         * @return The content of the HTTP response body.
-         */
-        public String getResponse() {return this.response;}
-
-        /**
-         * Gets the HTTP status code.
-         *
-         * @return The HTTP status code.
-         */
-        public int getStatus_code() {return this.status_code;}
     }
 }
