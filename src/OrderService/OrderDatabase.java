@@ -51,7 +51,7 @@ class OrderDatabase {
             statement.execute(sql);
         }
         catch (SQLException e) {
-            //(e.getMessage());
+	    System.out.println(e.getMessage());
         }
     }
 
