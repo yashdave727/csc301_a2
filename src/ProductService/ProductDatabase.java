@@ -18,7 +18,7 @@ public class ProductDatabase {
 	    // TODO: Add REDIS connection
             con = DriverManager.getConnection(url, user, password);
         } catch (SQLException e) {
-            //(e.getMessage());
+            System.out.println(e.getMessage());
         }
         return con;
     }

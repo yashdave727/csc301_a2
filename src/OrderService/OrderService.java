@@ -29,20 +29,23 @@ public class OrderService
     public static void main(String[] args) throws IOException
     {
         String ip = "0.0.0.0";
-        int port = -1;
-        String ISCS_IP = "";
+	String dockerIp, dbPort, redisPort;
+        int port;
 
-        // Get Port and ISCS_IP from the command line
-        if (args.length > 1)
+        // Get port to listen on
+	// Get docker ip
+	// Get db port
+	// Get redis port
+	if (args.length != 4)
         {
-            ISCS_IP = args[1];
-            port = Integer.parseInt(args[0]);
-        }
-        else
-        {
+            System.out.println("Missing arguments <port> <dockerIp> <dbPort> <redisPort>");
             System.exit(1);
         }
 
+        port = Integer.parseInt(args[0]);
+	dockerIp = args[1];
+	dbPort = args[2];
+	redisPort = args[3];
         HttpServer server = HttpServer.create(new InetSocketAddress(ip, port), 0);
 
         // Example: Set a custom executor with a fixed-size thread pool
@@ -50,17 +53,21 @@ public class OrderService
 
         // Set up context for a POST request to the OrderService
         server.createContext("/order", new OrderHandler());
-        server.createContext("/user", new UserHandler(ISCS_IP));
-        server.createContext("/product", new ProductHandler(ISCS_IP));
 
         // Set up context for a Get request to the OrderService
         server.createContext("/user/purchased/", new PurchaseHandler());
 
         server.setExecutor(null); // creates a default executor
 
+	// Initialize the database with docker IP and ports
+	orderDB.initialize(dockerIp, dbPort, redisPort);
+
         server.start();
 
-        //("Server started on port " + port);
+	System.out.println("Order Service is running on port " + port);
+	System.out.println("Docker IP: " + dockerIp);
+	System.out.println("DB Port: " + dbPort);
+	System.out.println("Redis Port: " + redisPort);
     }
 
     /**
@@ -127,7 +134,7 @@ public class OrderService
                     String response = jsonObject.toString();
                     sendResponse(exchange, statusCode, response);
                 }
-            
+
             }
             catch (Exception e)
             {
@@ -174,7 +181,7 @@ public class OrderService
 
                 // Parse the command
                 String command = "";
-			
+
 
                 switch (exchange.getRequestMethod())
                 {
@@ -249,7 +256,7 @@ public class OrderService
                 String endpoint = "";
                 String data = "";
 
-                String command = "";	
+                String command = "";
 
                 switch (exchange.getRequestMethod())
                 {
@@ -270,9 +277,9 @@ public class OrderService
 
                             endpoint = "/product/"+pathParts[2];
                             command = "get";
-                            
+
 			    //(url + endpoint);
-			    
+
 			    break;
                     default:
                             sendResponse(exchange, 400, new JSONObject().toString());
@@ -306,13 +313,13 @@ public class OrderService
                     //Initialize variables
                     String URI = exchange.getRequestURI().toString();
                     int userID = Integer.parseInt(URI.substring(16));
-		    
+
 		    //("==== URI ====");
 		    //(URI);
-		    
+
 		    //("==== userID ====");
 		    //(userID);
-                    
+
 		    String response = orderDB.getPurchased(userID);
 		    //("==== response ====");
                     //(response);
@@ -424,10 +431,19 @@ public class OrderService
      */
     public static void sendResponse(HttpExchange exchange, int rCode, String response) throws IOException
     {
-        exchange.sendResponseHeaders(rCode, response.length());
-        OutputStream os = exchange.getResponseBody();
-        os.write(response.getBytes(StandardCharsets.UTF_8));
-        os.close();
+        // Convert the response String to bytes to correctly measure its length in bytes
+        byte[] responseBytes = response.getBytes(StandardCharsets.UTF_8);
+
+        // Set the necessary response headers before sending the response body
+        exchange.getResponseHeaders().set("Content-Type", "application/json; charset=UTF-8");
+
+        // Correctly set the content length using the byte length of the response
+        exchange.sendResponseHeaders(rCode, responseBytes.length);
+
+        // Write the response bytes and close the OutputStream
+        try (OutputStream os = exchange.getResponseBody()) {
+            os.write(responseBytes);
+        }
     }
 
     /**

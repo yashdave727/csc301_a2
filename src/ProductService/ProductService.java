@@ -312,10 +312,23 @@ public class ProductService
      */
     public static void sendResponse(HttpExchange exchange, int rCode, String response) throws IOException
     {
-        exchange.sendResponseHeaders(rCode, response.length());
-        OutputStream os = exchange.getResponseBody();
-        os.write(response.getBytes(StandardCharsets.UTF_8));
-        os.close();
+//        exchange.sendResponseHeaders(rCode, response.length());
+//        OutputStream os = exchange.getResponseBody();
+//        os.write(response.getBytes(StandardCharsets.UTF_8));
+//        os.close();
+        // Convert the response String to bytes to correctly measure its length in bytes
+        byte[] responseBytes = response.getBytes(StandardCharsets.UTF_8);
+
+        // Set the necessary response headers before sending the response body
+        exchange.getResponseHeaders().set("Content-Type", "application/json; charset=UTF-8");
+
+        // Correctly set the content length using the byte length of the response
+        exchange.sendResponseHeaders(rCode, responseBytes.length);
+
+        // Write the response bytes and close the OutputStream
+        try (OutputStream os = exchange.getResponseBody()) {
+            os.write(responseBytes);
+        }
     }
 
     /**
