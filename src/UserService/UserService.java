@@ -63,7 +63,7 @@ public class UserService
 
         server.setExecutor(null); // creates a default executor
 
-	// Initialize the database
+	// Initialize the database with docker IP and ports
 	userDB.initialize(dockerIp, dbPort, redisPort);
 
         server.start();

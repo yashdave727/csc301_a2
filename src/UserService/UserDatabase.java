@@ -15,10 +15,7 @@ class UserDatabase {
     private final String password = "assignmentpassword";
 
     /**
-     * The connect method is used to establish a connection to the SQLite database.
-     * @param dockerIp is the IP address of the Docker container running the database.
-     * @param dbPort is the port number of the database.
-     * @param redisPort is the port number of the Redis server.
+     * The connect method is used to establish a connection to the database.
      * @return value is a connection object to the SQLite database.
      */
     private Connection connect() {
@@ -35,6 +32,9 @@ class UserDatabase {
     /**
      * The initialize method which is used in the constructor is for initializing the database by creating a table
      * for users if it does not already exist.
+     * @param dockerIp is the IP address of the Docker container running the database.
+     * @param dbPort is the port number of the database.
+     * @param redisPort is the port number of the Redis server.
      */
     public void initialize(String dockerIp, String dbPort, String redisPort) {
 	url = "jdbc:postgresql://" + dockerIp + ":" + dbPort + "/assignmentdb";
