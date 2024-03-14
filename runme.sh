@@ -33,7 +33,10 @@ compile_code() {
 start_us() {
 	# run the user service with the user port
 	USER_PORT=$1
-	java -cp "$script_dir/compiled/UserService:$script_dir/compiled/json-20231013.jar:$script_dir/compiled/postgresql-42.7.2.jar" UserService "$USER_PORT"
+	DOCKER_IP=$2
+	DB_PORT=$3
+	RD_PORT=$4
+	java -cp "$script_dir/compiled/UserService:$script_dir/compiled/json-20231013.jar:$script_dir/compiled/postgresql-42.7.2.jar" UserService "$USER_PORT" "$DOCKER_IP" "$DB_PORT" "$RD_PORT"
 }
 
 # Function to start the ProductService

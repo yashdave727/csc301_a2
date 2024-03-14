@@ -10,25 +10,21 @@ import java.sql.*;
 
 class UserDatabase {
 
-    private final String url = "jdbc:postgresql://142.1.46.61:5434/assignmentdb";
+    private String url = "jdbc:postgresql://142.1.44.57:5432/assignmentdb";
     private final String user = "assignmentuser";
     private final String password = "assignmentpassword";
 
-
-    /**
-     * Constructor for the UserDatabase. This method initializes the database using the initialize().
-     */
-    public UserDatabase() {
-        initialize();
-    }
-
     /**
      * The connect method is used to establish a connection to the SQLite database.
+     * @param dockerIp is the IP address of the Docker container running the database.
+     * @param dbPort is the port number of the database.
+     * @param redisPort is the port number of the Redis server.
      * @return value is a connection object to the SQLite database.
      */
     private Connection connect() {
         Connection con = null;
         try {
+	    // TODO: Add REDIS connection
             con = DriverManager.getConnection(url, user, password);
         } catch (SQLException e) {
             //(e.getMessage());
@@ -40,7 +36,8 @@ class UserDatabase {
      * The initialize method which is used in the constructor is for initializing the database by creating a table
      * for users if it does not already exist.
      */
-    public void initialize() {
+    public void initialize(String dockerIp, String dbPort, String redisPort) {
+	url = "jdbc:postgresql://" + dockerIp + ":" + dbPort + "/assignmentdb";
         try (Connection con = connect();
              Statement statement = con.createStatement()) {
             String sql = "CREATE TABLE IF NOT EXISTS users (" +
