@@ -94,60 +94,62 @@ public class OrderService
             {
 
                 // Handle POST request for /order
-                if ("POST".equals(exchange.getRequestMethod()))
-                {
-
-		    // Check that the command is "place order"
-		    if (!jsonObject.has("command") || !jsonObject.getString("command").equals("place order")) {
+                if (!"POST".equals(exchange.getRequestMethod()))
+		{
+		    // Send a 405 Method Not Allowed response for non-POST requests
+		    jsonObject.put("status", "Invalid Request");
+		    sendResponse(exchange, 405, jsonObject.toString());
+		}
+		// Check that the command is "place order"
+		if (!jsonObject.has("command") || !jsonObject.getString("command").equals("place order")) {
 			jsonObject.put("status", "Invalid Request");
 			// Remove the command from the JSON object
 			jsonObject.remove("command");
 			sendResponse(exchange, 400, jsonObject.toString());
-		    }
-		    // Remove the command from the JSON object
-		    jsonObject.remove("command");
+		}
+		// Remove the command from the JSON object
+		jsonObject.remove("command");
 
 
-                    //Verify that all fields are present for creation
-                    if (!(jsonObject.has("product_id")
-                            && jsonObject.has("user_id")
-                            && jsonObject.has("quantity")))
-                    {
+                //Verify that all fields are present for creation
+                if (!(jsonObject.has("product_id")
+			&& jsonObject.has("user_id")
+                        && jsonObject.has("quantity")))
+                {
+		jsonObject.put("status", "Invalid Request");
+                sendResponse(exchange, 400, jsonObject.toString());
+                exchange.close();
+                return;
+                }
+
+                int userID = jsonObject.getInt("user_id");
+                int prodID = jsonObject.getInt("product_id");
+                int quantity = jsonObject.getInt("quantity");
+
+                if (orderDB.getUser(userID).equals("") || orderDB.getProduct(prodID).equals("")) {
+			// Send a 405 Method Not Allowed response for non-POST requests
 			jsonObject.put("status", "Invalid Request");
                         sendResponse(exchange, 400, jsonObject.toString());
-                        exchange.close();
-                        return;
-                    }
+                }
 
-                    int userID = jsonObject.getInt("user_id");
-                    int prodID = jsonObject.getInt("product_id");
-                    int quantity = jsonObject.getInt("quantity");
-
-                    if (orderDB.getUser(userID).equals("") || orderDB.getProduct(prodID).equals("")) {
-                        // Send a 405 Method Not Allowed response for non-POST requests
-			jsonObject.put("status", "Invalid Request");
-                        sendResponse(exchange, 400, jsonObject.toString());
-                    }
-
-                    JSONObject product = new JSONObject(orderDB.getProduct(prodID));
-                    int newQuantity = product.getInt("quantity") - quantity;
-                    if (newQuantity < 0) {
+                JSONObject product = new JSONObject(orderDB.getProduct(prodID));
+                int newQuantity = product.getInt("quantity") - quantity;
+                if (newQuantity < 0) {
                         // Send a 405 Method Not Allowed response for non-POST requests
 			jsonObject.put("status", "Invalid Request");
 			sendResponse(exchange, 400, jsonObject.toString());
                     	return;
-		    }
+		}
 
-		    int statusCode = orderDB.placeOrder(userID, prodID, quantity, newQuantity);
+		int statusCode = orderDB.placeOrder(userID, prodID, quantity, newQuantity);
 
-                    if (statusCode != 200) {
+                if (statusCode != 200) {
                         jsonObject.put("status", "Invalid Request");
-                    } else {
+                } else {
                         jsonObject.put("status", "Success"); // TEST
-                    }
-                    String response = jsonObject.toString();
-                    sendResponse(exchange, statusCode, response);
                 }
+                String response = jsonObject.toString();
+                sendResponse(exchange, statusCode, response);
 
             }
             catch (Exception e)
