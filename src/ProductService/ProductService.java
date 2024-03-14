@@ -298,7 +298,6 @@ public class ProductService
                 //If any weird error occurs, then ProductService has received a bad http request
                 sendResponse(exchange, 400, new JSONObject().toString());
             }
-            exchange.close();
         }
     }
 
