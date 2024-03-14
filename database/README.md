@@ -1,29 +1,15 @@
-# Dockerized Database Setup
+# Docker
+
+**NOTE: These scripts can only be run from the csc301 VM located at the port specified on Piazza.**
 
 ## Docker setup
 
-To setup the database, a Dockerfile was created to create an instance of the database. The docker:
+There are two shell scripts in this directory:
 
-1. Chooses the latest version of PostgreSQL
-2. Sets the database, user, and password of the database
-3. Copies the file that initially sets up the database to the necessary location
+- `start_docker.sh`: This script will start the docker containers for both the database and the redis cache.
+- `kill_docker.sh`: This script will stop the docker containers for both the database and the redis cache.
 
-## Script setup
+## Running the scripts
 
-The runme_db.sh script will run two commands:
-
-1. Command to create the docker image (if image is created then no issue)
-2. Command to run the docker image
-
-## Run the script
-
-To run the script, make sure that the script has the correct permissions to run. Do this by running:
-
-```chmod +x runme_db.sh```
-
-Verify permissions by running:
-
-```ls -larth runme_db.sh```
-
-Finally, run the command:
-```./runme_db.sh```
+- Ensure that the scripts are executable by running `chmod +x start_docker.sh kill_docker.sh`.
+- Alternatively, run `bash start_docker.sh` and `bash kill_docker.sh`.
