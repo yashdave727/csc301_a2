@@ -89,7 +89,7 @@ case "$1" in
         start_ps "$2" "$3" "$4" "$5"
         ;;
     -i)
-	start_iscs "$2"
+	    start_iscs "$2"
         ;;
     -o)
         start_os "$2" "$3" "$4"
@@ -98,7 +98,7 @@ case "$1" in
         start_wg "$2"
 	;;
     -d)
-	start_db
+	    start_db
 	;;
     *)
         echo "Usage: $0 { -c | -d | -u port | -p port | -i port | -o port | -w workloadfile }"
