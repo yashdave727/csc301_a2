@@ -15,7 +15,8 @@ password="your_password"
 
 # Function to start the specified service
 start_service() {
-    local service="$1"
+    local command="$1"
+    local service="$2"
     local port=$(jq -r ".$service" "$script_dir/config.json" | jq -r '.port')
     local docker_ip=$(jq -r '.docker' "$script_dir/config.json")
     local db_port=$(jq -r '.db_port' "$script_dir/config.json")
@@ -25,7 +26,7 @@ start_service() {
     for ip in "${ips[@]}"; do
         service_log="$logs_dir/${service}_${ip}_${port}.log"
         echo "Starting $service service on $ip:$port..."
-        sshpass -p "$password" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$username@$ip" "bash $script_dir/runme.sh -$service $port $docker_ip $db_port $rd_port" >> "$service_log" 2>&1 &
+        sshpass -p "$password" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$username@$ip" "bash $script_dir/runme.sh $command $port $docker_ip $db_port $rd_port" >> "$service_log" 2>&1 &
     done
 }
 
@@ -35,13 +36,13 @@ case "$1" in
         bash "$script_dir/runme.sh" -c
         ;;
     -u)
-        start_service "user"
+        start_service "-u" "user"
         ;;
     -p)
-        start_service "product"
+        start_service "-p" "product"
         ;;
     -o)
-        start_service "order"
+        start_service "-o" "order"
         ;;
     *)
         echo "Usage: $0 { -c | -u | -p | -o }"
