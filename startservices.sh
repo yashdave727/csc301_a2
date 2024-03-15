@@ -17,11 +17,11 @@ password="your_password"
 start_service() {
     local command="$1"
     local service="$2"
-    local port=$(jq -r ".$service" "$script_dir/config.json" | jq -r '.port')
-    local docker_ip=$(jq -r '.docker' "$script_dir/config.json")
-    local db_port=$(jq -r '.db_port' "$script_dir/config.json")
-    local rd_port=$(jq -r '.rd_port' "$script_dir/config.json")
-    local ips=($(jq -r ".$service[]" "$script_dir/config.json"))
+    local port=$(grep -oP "\"$service\":\s*\K\d+" "$script_dir/config.json")
+    local docker_ip=$(grep -oP "\"docker\":\s*\"\K[^\" ]+" "$script_dir/config.json")
+    local db_port=$(grep -oP "\"db_port\":\s*\K\d+" "$script_dir/config.json")
+    local rd_port=$(grep -oP "\"rd_port\":\s*\K\d+" "$script_dir/config.json")
+    local ips=($(grep -oP "\"$service\":\s*\[\s*\K[^\]]+" "$script_dir/config.json" | grep -oP "\d+\.\d+\.\d+\.\d+"))
 
     for ip in "${ips[@]}"; do
         service_log="$logs_dir/${service}_${ip}_${port}.log"
