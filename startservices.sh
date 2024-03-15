@@ -11,7 +11,6 @@ mkdir -p "$logs_dir"
 
 # Local username and password for SSH
 username="your_username"
-password="your_password"
 
 # Function to start the specified service
 start_service() {
@@ -26,7 +25,7 @@ start_service() {
     for ip in "${ips[@]}"; do
         service_log="$logs_dir/${service}_${ip}_${port}.log"
         echo "Starting $service service on $ip:$port..."
-        sshpass -p "$password" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$username@$ip" "bash $script_dir/runme.sh $command $port $docker_ip $db_port $rd_port" >> "$service_log" 2>&1 &
+        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$username@$ip" "bash $script_dir/runme.sh $command $port $docker_ip $db_port $rd_port" >> "$service_log" 2>&1 &
     done
 }
 
