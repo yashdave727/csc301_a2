@@ -12,10 +12,10 @@
 // URL to send HTTP requests to
 char *URL;
 // Endpoints
-char *PRODUCT_ENDPOINT = "/product";
-char *USER_ENDPOINT = "/user";
-char *ORDER_ENDPOINT = "/order";
-char *ORDER_HISTORY_ENDPOINT = "/user/purchased";
+const char *PRODUCT_ENDPOINT = "/product";
+const char *USER_ENDPOINT = "/user";
+const char *ORDER_ENDPOINT = "/order";
+const char *ORDER_HISTORY_ENDPOINT = "/user/purchased";
 
 // Number of threads to create
 int NUM_THREADS;
@@ -32,6 +32,7 @@ typedef struct {
 
 
 // Function to get a random user/product ID
+// Returns a malloc'd string that must be freed
 char *get_random_id() {
 	// Generate a random user ID between 0 and N
 	int user_id = rand() % N;
@@ -42,65 +43,122 @@ char *get_random_id() {
 	return user_id_str;
 }
 
+// curl writeback function that does nothing (used to suppress output)
+size_t writeback(void *ptr, size_t size, size_t nmemb, void *stream) {
+	(void)ptr;
+	(void)stream;
+	return size * nmemb;
+}
+
 // Function to send a GET request to the server
-void send_get_request(char *url, char *endpoint) {
+void send_get_request(char *url, const char *endpoint) {
 	char *random_id = get_random_id();
-	char *full_url = malloc(strlen(url) + 1 + strlen(endpoint) + 1 + strlen(random_id));
-	strcpy(full_url, url);
-	strcat(full_url, "/");
-	strcat(full_url, endpoint);
-	strcat(full_url, "/");
-	strcat(full_url, random_id);
-	free(random_id); // Free the random ID as it is no longer needed
+	char *full_url = malloc(strlen(url) + 1 + strlen(endpoint) + 1 + strlen(random_id) + 1);
+	sprintf(full_url, "%s/%s/%s", url, endpoint, random_id);
 
 	// Send the GET request
 	CURL *curl;
 	CURLcode res;
 	curl = curl_easy_init();
 	if (curl) {
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeback); // Suppress output
 		curl_easy_setopt(curl, CURLOPT_URL, full_url);
+		curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
 		res = curl_easy_perform(curl);
 		if (res != CURLE_OK) {
 			fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
 		}
+		// Check the return code
+		long response_code;
+		curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
+		if (response_code != 200) {
+			fprintf(stderr, "GET request failed: %ld\n", response_code);
+		}
 		curl_easy_cleanup(curl);
 	}
+	free(random_id); // Free the random ID as it is no longer needed
 	free(full_url); // Free the full URL as it is no longer needed
 }
 
 const char *json_template = "{\"command\": \"place order\", \"product_id\": %s, \"user_id\": %s, \"quantity\": 0}";
 
 // Function to send a POST request to the server
-void send_post_request(char *url, char *endpoint) {
+void send_post_request(char *url, const char *endpoint) {
 	char *random_user_id = get_random_id();
 	char *random_product_id = get_random_id();
 	char *json_body = malloc(strlen(json_template) + strlen(random_product_id) + strlen(random_user_id) + 1);
 	sprintf(json_body, json_template, random_product_id, random_user_id);
-	free(random_user_id); // Free the random user ID as it is no longer needed
-	free(random_product_id); // Free the random product ID as it is no longer needed
 
 	char *full_url = malloc(strlen(url) + 1 + strlen(endpoint) + 1);
-	strcpy(full_url, url);
-	strcat(full_url, "/");
-	strcat(full_url, endpoint);
+	sprintf(full_url, "%s/%s", url, endpoint);
 
 	// Send the POST request
 	CURL *curl;
 	CURLcode res;
 	curl = curl_easy_init();
 	if (curl) {
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeback); // Suppress output
 		curl_easy_setopt(curl, CURLOPT_URL, full_url);
+		curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
 		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_body);
 		curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)strlen(json_body));
-		res = curl_easy_perform(curl);
+		res = curl_easy_perform(curl); // Perform the request
 		if (res != CURLE_OK) {
 			fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
 		}
+		// Check the return code
+		long response_code;
+		curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
+		if (response_code != 200) {
+			fprintf(stderr, "POST request failed: %ld\n", response_code);
+		}
 		curl_easy_cleanup(curl);
 	}
+	free(random_user_id); // Free the random user ID as it is no longer needed
+	free(random_product_id); // Free the random product ID as it is no longer needed
 	free(json_body); // Free the JSON body as it is no longer needed
 	free(full_url); // Free the full URL as it is no longer needed
 }
+
+const char *json_template_update = "{\"command\": \"update\", \"id\": %s}";
+
+// Send a POST request to update the id provided at the given endpoint
+void send_post_request_update(char *url, const char *endpoint) {
+	char *random_id = get_random_id();
+	char *json_body = malloc(strlen(json_template_update) + strlen(random_id) + 1);
+	sprintf(json_body, json_template_update, random_id);
+
+	char *full_url = malloc(strlen(url) + 1 + strlen(endpoint) + 1);
+	sprintf(full_url, "%s/%s", url, endpoint);
+
+	// Send the POST request
+	CURL *curl;
+	CURLcode res;
+	curl = curl_easy_init();
+	if (curl) {
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeback); // Suppress output
+		curl_easy_setopt(curl, CURLOPT_URL, full_url);
+		curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
+		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_body);
+		curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)strlen(json_body));
+		res = curl_easy_perform(curl); // Perform the request
+		if (res != CURLE_OK) {
+			fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+		}
+		// Check the return code
+		long response_code;
+		curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
+		if (response_code != 200) {
+			fprintf(stderr, "POST request failed: %ld\n", response_code);
+		}
+		curl_easy_cleanup(curl);
+	}
+	free(random_id); // Free the random ID as it is no longer needed
+	free(json_body); // Free the JSON body as it is no longer needed
+	free(full_url); // Free the full URL as it is no longer needed
+}
+
+int running = 1;
 
 // Function to handle HTTP requests in each thread
 void *send_requests(void *args) {
@@ -109,9 +167,10 @@ void *send_requests(void *args) {
 	thread_args *t_args = (thread_args *)args;
 	char *url = t_args->url;
 
-	while (1) {
+	while (running) {
 		// Send a random request
-		// Randomly choose between getting a product, user, order history, or placing an order
+		// Randomly choose between getting a product, user, order history
+		// Updating a product, user, or placing an order
 		switch (rand() % 6) {
 			case 0:
 				// Get a product
@@ -124,6 +183,14 @@ void *send_requests(void *args) {
 			case 2:
 				// Get order history
 				send_get_request(url, ORDER_HISTORY_ENDPOINT);
+				break;
+			case 3:
+				// Update a product
+				send_post_request_update(url, PRODUCT_ENDPOINT);
+				break;
+			case 4:
+				// Update a user
+				send_post_request_update(url, USER_ENDPOINT);
 				break;
 			default:
 				// Place an order
@@ -156,6 +223,13 @@ int main(int argc, char *argv[]) {
 	N = atoi(argv[3]);
 	int time = atoi(argv[4]);
 
+	// curl global initialization
+	CURLcode res = curl_global_init(CURL_GLOBAL_DEFAULT);
+	if (res != CURLE_OK) {
+		fprintf(stderr, "curl_global_init() failed: %s\n", curl_easy_strerror(res));
+		return 1;
+	}
+
 	// Create threads
 	pthread_t threads[NUM_THREADS];
 	thread_args args[NUM_THREADS];
@@ -171,11 +245,15 @@ int main(int argc, char *argv[]) {
 	}
 	// Wait for time seconds
 	sleep(time);
-	// Terminate threads
+	running = 0;
+	// Join threads
 	for (int i = 0; i < NUM_THREADS; i++) {
-		pthread_cancel(threads[i]);
+		pthread_join(threads[i], NULL);
 	}
 	end = clock();
+
+	// curl global cleanup
+	curl_global_cleanup();
 
 	// Calculate the number of requests sent
 	int total_requests = 0;
