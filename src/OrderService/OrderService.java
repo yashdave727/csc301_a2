@@ -87,6 +87,7 @@ public class OrderService
         @Override
         public void handle(HttpExchange exchange) throws IOException
         {
+	    System.out.println("In the handle method");
             //Initialize variables
             String orderData = OrderService.getRequestBody(exchange);
             JSONObject jsonObject = new JSONObject(orderData);
@@ -180,6 +181,7 @@ public class OrderService
         {
             try
             {
+		System.out.println("In the PurchaseHandle method");
                 // Handle GET request for /user/purchased
                 if ("GET".equals(exchange.getRequestMethod()))
                 {
