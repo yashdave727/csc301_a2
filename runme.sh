@@ -47,10 +47,10 @@ start_ps() {
 start_os() {
 	# Run the order service with the order port and the ISCS IP and port
 	ORDER_PORT=$1
-	ISCS_IP=$2
-	ISCS_PORT=$3
-	echo "Starting OrderService with port $ORDER_PORT and ISCS IP $ISCS_IP and port $ISCS_PORT"
-	java -cp "$script_dir/compiled/OrderService:$script_dir/compiled/json-20231013.jar:$script_dir/compiled/postgresql-42.7.2.jar" OrderService "$ORDER_PORT" "$ISCS_IP:$ISCS_PORT"
+	DOCKER_IP=$2
+	DB_PORT=$3
+	RD_PORT=$4
+	java -cp "$script_dir/compiled/OrderService:$script_dir/compiled/json-20231013.jar:$script_dir/compiled/postgresql-42.7.2.jar" OrderService "$ORDER_PORT" "$DOCKER_IP" "$DB_PORT" "$RD_PORT"
 }
 
 # Function to start the WorkloadParser
@@ -92,7 +92,7 @@ case "$1" in
 	    start_iscs "$2"
         ;;
     -o)
-        start_os "$2" "$3" "$4"
+        start_os "$2" "$3" "$4" "$5"
         ;;
     -w)
         start_wg "$2"
