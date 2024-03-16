@@ -99,6 +99,8 @@ public class OrderService
 		    // Send a 405 Method Not Allowed response for non-POST requests
 		    jsonObject.put("status", "Invalid Request");
 		    sendResponse(exchange, 405, jsonObject.toString());
+		    exchange.close();
+		    return;
 		}
 		// Check that the command is "place order"
 		if (!jsonObject.has("command") || !jsonObject.getString("command").equals("place order")) {
@@ -106,6 +108,8 @@ public class OrderService
 			// Remove the command from the JSON object
 			jsonObject.remove("command");
 			sendResponse(exchange, 400, jsonObject.toString());
+			exchange.close();
+			return;
 		}
 		// Remove the command from the JSON object
 		jsonObject.remove("command");
@@ -130,6 +134,8 @@ public class OrderService
 			// Send a 405 Method Not Allowed response for non-POST requests
 			jsonObject.put("status", "Invalid Request");
                         sendResponse(exchange, 400, jsonObject.toString());
+			exchange.close();
+			return;
                 }
 
                 JSONObject product = new JSONObject(orderDB.getProduct(prodID));
@@ -138,6 +144,7 @@ public class OrderService
                         // Send a 405 Method Not Allowed response for non-POST requests
 			jsonObject.put("status", "Invalid Request");
 			sendResponse(exchange, 400, jsonObject.toString());
+			exchange.close();
                     	return;
 		}
 
@@ -162,7 +169,7 @@ public class OrderService
         }
     }
 
-   
+
     static class PurchaseHandler implements HttpHandler
     {
         @Override
@@ -204,7 +211,7 @@ public class OrderService
         }
     }
 
-    
+
     /**
      * Sends an HTTP response with the specified response code and content.
      *
