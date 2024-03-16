@@ -46,6 +46,11 @@ public class UserService
             System.exit(1);
         }
 
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+        System.out.println("Shutting down User Database connection pool...");
+        userDB.shutdownPool();
+        }));
+
         port = Integer.parseInt(args[0]);
 	dockerIp = args[1];
 	dbPort = args[2];

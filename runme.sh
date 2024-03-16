@@ -5,15 +5,18 @@ script_dir=$(dirname "$(readlink -f "$0")")
 
 # Function to compile Java code
 compile_code() {
-    javac -d "$script_dir/compiled/OrderService" -cp "$script_dir/src/json-20231013.jar:$script_dir/src/postgresql-42.7.2.jar" "$script_dir/src/OrderService"/*.java
-    javac -d "$script_dir/compiled/ProductService" -cp "$script_dir/src/json-20231013.jar:$script_dir/src/postgresql-42.7.2.jar" "$script_dir/src/ProductService"/*.java
-    javac -d "$script_dir/compiled/UserService" -cp "$script_dir/src/json-20231013.jar:$script_dir/src/postgresql-42.7.2.jar" "$script_dir/src/UserService"/*.java
+    javac -d "$script_dir/compiled/OrderService" -cp "$script_dir/src/json-20231013.jar:$script_dir/src/postgresql-42.7.2.jar:$script_dir/src/HikariCP-5.1.0.jar:$script_dir/src/slf4j-api-1.7.30.jar:$script_dir/src/slf4j-simple-1.7.30.jar" "$script_dir/src/OrderService"/*.java
+    javac -d "$script_dir/compiled/ProductService" -cp "$script_dir/src/json-20231013.jar:$script_dir/src/postgresql-42.7.2.jar:$script_dir/src/HikariCP-5.1.0.jar:$script_dir/src/slf4j-api-1.7.30.jar:$script_dir/src/slf4j-simple-1.7.30.jar" "$script_dir/src/ProductService"/*.java
+    javac -d "$script_dir/compiled/UserService" -cp "$script_dir/src/json-20231013.jar:$script_dir/src/postgresql-42.7.2.jar:$script_dir/src/HikariCP-5.1.0.jar:$script_dir/src/slf4j-api-1.7.30.jar:$script_dir/src/slf4j-simple-1.7.30.jar" "$script_dir/src/UserService"/*.java
 
     # Copy all necessary dependencies
     cp "$script_dir/src/workload_parser.py" "$script_dir/compiled/"
     cp -r "$script_dir/src/ISCS/" "$script_dir/compiled/"
     cp "$script_dir/src/json-20231013.jar" "$script_dir/compiled/"
     cp "$script_dir/src/postgresql-42.7.2.jar" "$script_dir/compiled/"
+    cp "$script_dir/src/HikariCP-5.1.0.jar" "$script_dir/compiled/"
+    cp "$script_dir/src/slf4j-api-1.7.30.jar" "$script_dir/compiled/"
+    cp "$script_dir/src/slf4j-simple-1.7.30.jar" "$script_dir/compiled/"
 
     if [ "$?" -eq 0 ]; then
         echo "Compilation successful."
@@ -30,7 +33,7 @@ start_us() {
 	DOCKER_IP=$2
 	DB_PORT=$3
 	RD_PORT=$4
-	java -cp "$script_dir/compiled/UserService:$script_dir/compiled/json-20231013.jar:$script_dir/compiled/postgresql-42.7.2.jar" UserService "$USER_PORT" "$DOCKER_IP" "$DB_PORT" "$RD_PORT"
+	java -cp "$script_dir/compiled/UserService:$script_dir/compiled/json-20231013.jar:$script_dir/compiled/postgresql-42.7.2.jar:$script_dir/compiled/HikariCP-5.1.0.jar:$script_dir/compiled/slf4j-api-1.7.30.jar:$script_dir/compiled/slf4j-simple-1.7.30.jar" UserService "$USER_PORT" "$DOCKER_IP" "$DB_PORT" "$RD_PORT"
 }
 
 # Function to start the ProductService
@@ -40,7 +43,7 @@ start_ps() {
 	DOCKER_IP=$2
 	DB_PORT=$3
 	RD_PORT=$4
-	java -cp "$script_dir/compiled/ProductService:$script_dir/compiled/json-20231013.jar:$script_dir/compiled/postgresql-42.7.2.jar" ProductService "$PRODUCT_PORT" "$DOCKER_IP" "$DB_PORT" "$RD_PORT"
+	java -cp "$script_dir/compiled/ProductService:$script_dir/compiled/json-20231013.jar:$script_dir/compiled/postgresql-42.7.2.jar:$script_dir/compiled/HikariCP-5.1.0.jar:$script_dir/compiled/slf4j-api-1.7.30.jar:$script_dir/compiled/slf4j-simple-1.7.30.jar" ProductService "$PRODUCT_PORT" "$DOCKER_IP" "$DB_PORT" "$RD_PORT"
 }
 
 # Function to start the OrderService
@@ -50,7 +53,7 @@ start_os() {
 	ISCS_IP=$2
 	ISCS_PORT=$3
 	echo "Starting OrderService with port $ORDER_PORT and ISCS IP $ISCS_IP and port $ISCS_PORT"
-	java -cp "$script_dir/compiled/OrderService:$script_dir/compiled/json-20231013.jar:$script_dir/compiled/postgresql-42.7.2.jar" OrderService "$ORDER_PORT" "$ISCS_IP:$ISCS_PORT"
+	java -cp "$script_dir/compiled/OrderService:$script_dir/compiled/json-20231013.jar:$script_dir/compiled/postgresql-42.7.2.jar:$script_dir/compiled/HikariCP-5.1.0.jar:$script_dir/compiled/slf4j-api-1.7.30.jar:$script_dir/compiled/slf4j-simple-1.7.30.jar" OrderService "$ORDER_PORT" "$ISCS_IP:$ISCS_PORT"
 }
 
 # Function to start the WorkloadParser

@@ -1,3 +1,5 @@
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -10,23 +12,30 @@ import java.sql.*;
 
 class UserDatabase {
 
-    public static String url = "jdbc:postgresql://142.1.44.57:5432/assignmentdb";
-    private final String user = "assignmentuser";
-    private final String password = "assignmentpassword";
+    private static HikariDataSource dataSource;
+
+    static {
+        // Configure HikariCP
+        HikariConfig config = new HikariConfig();
+        // Adjust the JDBC URL, username, and password to match your PostgreSQL container setup
+        config.setJdbcUrl("jdbc:postgresql://142.1.44.57:5432/assignmentdb");
+        config.setUsername("assignmentuser");
+        config.setPassword("assignmentpassword");
+
+        // // Optional: Configure additional HikariCP settings as needed
+        // config.addDataSourceProperty("cachePrepStmts", "true");
+        // config.addDataSourceProperty("prepStmtCacheSize", "250");
+        // config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
+
+        dataSource = new HikariDataSource(config);
+    }
 
     /**
      * The connect method is used to establish a connection to the database.
      * @return value is a connection object to the SQLite database.
      */
-    private Connection connect() {
-        Connection con = null;
-        try {
-	    // TODO: Add REDIS connection
-            con = DriverManager.getConnection(url, user, password);
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-        }
-        return con;
+    private Connection connect() throws SQLException {
+        return dataSource.getConnection();
     }
 
     /**
@@ -37,7 +46,7 @@ class UserDatabase {
      * @param redisPort is the port number of the Redis server.
      */
     public void initialize(String dockerIp, String dbPort, String redisPort) {
-	url = "jdbc:postgresql://" + dockerIp + ":" + dbPort + "/assignmentdb";
+	// url = "jdbc:postgresql://" + dockerIp + ":" + dbPort + "/assignmentdb";
         try (Connection con = connect();
              Statement statement = con.createStatement()) {
             String sql = "CREATE TABLE IF NOT EXISTS users (" +
@@ -50,6 +59,13 @@ class UserDatabase {
         }
         catch (SQLException e) {
             System.out.println(e.getMessage());
+        }
+    }
+
+    public static void shutdownPool() {
+        if (dataSource != null && !dataSource.isClosed()) {
+            dataSource.close();
+            System.out.println("Product Database connection pool successfully shut down.");
         }
     }
 
