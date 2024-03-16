@@ -99,7 +99,7 @@ def forward_order_history_request(_id):
     next_ip = get_next_service_ip("order")
     # Debugging info
     if app.debug:
-        print(f"Forwarding request to {next_ip}/order/purchased/{_id}", file=sys.stderr)
+        print(f"Forwarding request to {next_ip}/user/purchased/{_id}", file=sys.stderr)
 
     # Forward the request to the next service
     return redirect(f"{next_ip}/order/purchased/{_id}", code=307)
