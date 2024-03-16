@@ -160,20 +160,29 @@ class UserDatabase {
         return "";
     }
 
-    public int deleteUser(int id) {
-        String sql = "UPDATE users SET deleted = TRUE WHERE id = ?";
+    public int deleteUser(int id, String username, String email, String password) {
+        String sql = "UPDATE users SET deleted = TRUE WHERE id = ? AND username = ? AND email = ? AND password = ?";
+
         try (Connection con = this.connect();
              PreparedStatement statement = con.prepareStatement(sql)) {
             statement.setInt(1, id);
+            statement.setString(2, username);
+            statement.setString(3, email);
+            statement.setString(4, password);
             int affectedRows = statement.executeUpdate();
+
+            // User had been updated if any of the columns' values have changed
             if (affectedRows > 0) {
-                invalidateInRedis("user:" + id); // Remove the user from the cache
-                return 200; // User marked as deleted successfully
-            } else {
-                return 404; // User not found
+                invalidateInRedis("user:" + id);
+                return 200;
             }
-        } catch (SQLException e) {
-            return 500; // Internal Server Error
+            // As specified in Piazza post @127
+            else {
+                return 404;
+            }
+        }
+        catch (SQLException e) {
+            return 400; // Internal Server Error
         }
     }
     

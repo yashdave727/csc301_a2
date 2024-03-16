@@ -155,26 +155,33 @@ public class ProductDatabase {
     
 
     
-    public int deleteProduct(int id) {
-        String sql = "DELETE FROM products WHERE id = ?";
-    
+    public int deleteProduct(int id, String name, float price, int quantity) {
+        String sql = "DELETE FROM products WHERE id = ? AND name = ? AND price = ? AND" +
+                " quantity = ?";
+
         try (Connection con = this.connect();
              PreparedStatement statement = con.prepareStatement(sql)) {
             statement.setInt(1, id);
+            statement.setString(2, name);
+            statement.setFloat(3, price);
+            statement.setInt(4, quantity);
             int affectedRows = statement.executeUpdate();
-    
+
+            // Product had been deleted if number of rows has changed
             if (affectedRows > 0) {
                 // After deleting from the database, also remove from Redis if it's cached
                 invalidateInRedis("product:" + id);
-                return 200;  // OK - Product deleted successfully
-            } else {
-                return 404;  // Product not found
+                return 200;
             }
-        } catch (SQLException e) {
-            return 400;  // Internal Server Error
+            // As specified in Piazza post @127
+            else {
+                return 404;
+            }
+        }
+        catch (SQLException e) {
+            return 400; // Internal Server Error
         }
     }
-    
 
 
 
