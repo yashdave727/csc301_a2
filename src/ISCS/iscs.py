@@ -102,7 +102,7 @@ def forward_order_history_request(_id):
         print(f"Forwarding request to {next_ip}/user/purchased/{_id}", file=sys.stderr)
 
     # Forward the request to the next service
-    return redirect(f"{next_ip}/order/purchased/{_id}", code=307)
+    return redirect(f"{next_ip}/user/purchased/{_id}", code=307)
 
 @app.route('/<endpoint>/<_id>', methods=['GET'])
 def forward_request_with_id(endpoint, _id):
