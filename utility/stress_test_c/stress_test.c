@@ -71,7 +71,7 @@ void send_get_request(char *url, const char *endpoint) {
 		// Check the return code
 		long response_code;
 		curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
-		if (response_code != 200) {
+		if (response_code != 200 && response_code != 307) {
 			fprintf(stderr, "GET request failed: %ld\n", response_code);
 		}
 		curl_easy_cleanup(curl);
@@ -80,7 +80,7 @@ void send_get_request(char *url, const char *endpoint) {
 	free(full_url); // Free the full URL as it is no longer needed
 }
 
-const char *json_template = "{\"command\": \"place order\", \"product_id\": %s, \"user_id\": %s, \"quantity\": 0}";
+const char *json_template = "{\"command\": \"place order\", \"product_id\": %s, \"user_id\": %s, \"quantity\": 1}";
 
 // Function to send a POST request to the server
 void send_post_request(char *url, const char *endpoint) {
@@ -109,7 +109,7 @@ void send_post_request(char *url, const char *endpoint) {
 		// Check the return code
 		long response_code;
 		curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
-		if (response_code != 200) {
+		if (response_code != 200 && response_code != 307) {
 			fprintf(stderr, "POST request failed: %ld\n", response_code);
 		}
 		curl_easy_cleanup(curl);
