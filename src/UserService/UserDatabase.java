@@ -15,6 +15,8 @@ class UserDatabase {
     public static String url = "jdbc:postgresql://142.1.44.57:5432/assignmentdb";
     private final String user = "assignmentuser";
     private final String password = "assignmentpassword";
+    private static String redisHost = "localhost";  // Change to your Redis host IP
+    private static int redisPort = 6379;
 
     /**
      * The connect method is used to establish a connection to the database.
@@ -32,7 +34,7 @@ class UserDatabase {
     }
 
 
-    private Jedis connectToRedis(String redisHost, int redisPort) {
+    private Jedis connectToRedis() {
         try {
             Jedis jedis = new Jedis(redisHost, redisPort);
             return jedis; // Successfully connected
@@ -44,7 +46,7 @@ class UserDatabase {
 
     
     public void storeInRedis(String key, String json) {
-        Jedis jedis = connectToRedis("localhost", 6379); // Adjust host and port if necessary
+        Jedis jedis = connectToRedis(); // Adjust host and port if necessary
         if (jedis != null) {
             jedis.set(key, json);
             jedis.close();
@@ -52,7 +54,7 @@ class UserDatabase {
     }
     
     public String retrieveFromRedis(String key) {
-        Jedis jedis = connectToRedis("localhost", 6379); // Adjust host and port if necessary
+        Jedis jedis = connectToRedis(); // Adjust host and port if necessary
         if (jedis != null) {
             String value = jedis.get(key);
             jedis.close();
@@ -62,7 +64,7 @@ class UserDatabase {
     }
     
     public void invalidateInRedis(String key) {
-        Jedis jedis = connectToRedis("localhost", 6379); // Adjust host and port if necessary
+        Jedis jedis = connectToRedis(); // Adjust host and port if necessary
         if (jedis != null) {
             jedis.del(key);
             jedis.close();

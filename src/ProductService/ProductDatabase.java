@@ -9,6 +9,8 @@ public class ProductDatabase {
     public static String url = "jdbc:postgresql://142.1.44.57:5432/assignmentdb";
     private final String user = "assignmentuser";
     private final String password = "assignmentpassword";
+    private final String redisHost = "localhost"; // Change this to your Redis server's IP address
+    private final int redisPort = 6379;
 
     /**
      * The connect method is used to establish a connection to the database.
@@ -25,7 +27,7 @@ public class ProductDatabase {
         return con;
     }
     
-    private Jedis connectToRedis(String redisHost, int redisPort) {
+    private Jedis connectToRedis() {
         try {
             Jedis jedis = new Jedis(redisHost, redisPort);
             return jedis; // Successfully connected
@@ -36,7 +38,7 @@ public class ProductDatabase {
     }
 
     public void storeInRedis(String key, String json) {
-        Jedis jedis = connectToRedis("localhost", 6379); // Adjust host and port if necessary
+        Jedis jedis = connectToRedis(); 
         if (jedis != null) {
             jedis.set(key, json);
             jedis.close();
@@ -44,7 +46,7 @@ public class ProductDatabase {
     }
     
     public String retrieveFromRedis(String key) {
-        Jedis jedis = connectToRedis("localhost", 6379); // Adjust host and port if necessary
+        Jedis jedis = connectToRedis(); 
         if (jedis != null) {
             String value = jedis.get(key);
             jedis.close();
@@ -54,7 +56,7 @@ public class ProductDatabase {
     }
     
     public void invalidateInRedis(String key) {
-        Jedis jedis = connectToRedis("localhost", 6379); // Adjust host and port if necessary
+        Jedis jedis = connectToRedis(); 
         if (jedis != null) {
             jedis.del(key);
             jedis.close();
