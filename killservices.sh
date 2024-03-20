@@ -10,7 +10,7 @@ logs_dir="$script_dir/logs"
 kill_services() {
     local service="$1"
     local pattern="${service}_*"
-    
+
     # Find all log files matching the service pattern
     log_files=$(find "$logs_dir" -maxdepth 1 -name "$pattern")
 
