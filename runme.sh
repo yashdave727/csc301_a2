@@ -36,7 +36,7 @@ start_us() {
 	DOCKER_IP=$2
 	DB_PORT=$3
 	RD_PORT=$4
-	java -cp "$script_dir/compiled/UserService:$script_dir/compiled/json-20231013.jar:$script_dir/compiled/postgresql-42.7.2.jar:$script_dir/compiled/HikariCP-5.1.0.jar:$script_dir/compiled/slf4j-api-1.7.30.jar:$script_dir/compiled/slf4j-simple-1.7.30.jar" UserService "$USER_PORT" "$DOCKER_IP" "$DB_PORT" "$RD_PORT"
+	java -cp "$script_dir/compiled/UserService:$script_dir/src/jedis-5.2.0-beta1.jar:$script_dir/compiled/json-20231013.jar:$script_dir/compiled/postgresql-42.7.2.jar:$script_dir/compiled/HikariCP-5.1.0.jar:$script_dir/compiled/slf4j-api-1.7.30.jar:$script_dir/compiled/slf4j-simple-1.7.30.jar" UserService "$USER_PORT" "$DOCKER_IP" "$DB_PORT" "$RD_PORT"
 }
 
 # Function to start the ProductService
@@ -46,7 +46,7 @@ start_ps() {
 	DOCKER_IP=$2
 	DB_PORT=$3
 	RD_PORT=$4
-	java -cp "$script_dir/compiled/ProductService:$script_dir/compiled/json-20231013.jar:$script_dir/compiled/postgresql-42.7.2.jar:$script_dir/compiled/HikariCP-5.1.0.jar:$script_dir/compiled/slf4j-api-1.7.30.jar:$script_dir/compiled/slf4j-simple-1.7.30.jar" ProductService "$PRODUCT_PORT" "$DOCKER_IP" "$DB_PORT" "$RD_PORT"
+	java -cp "$script_dir/compiled/ProductService:$script_dir/src/jedis-5.2.0-beta1.jar:$script_dir/compiled/json-20231013.jar:$script_dir/compiled/postgresql-42.7.2.jar:$script_dir/compiled/HikariCP-5.1.0.jar:$script_dir/compiled/slf4j-api-1.7.30.jar:$script_dir/compiled/slf4j-simple-1.7.30.jar" ProductService "$PRODUCT_PORT" "$DOCKER_IP" "$DB_PORT" "$RD_PORT"
 }
 
 # Function to start the OrderService
@@ -55,8 +55,7 @@ start_os() {
 	ORDER_PORT=$1
 	ISCS_IP=$2
 	ISCS_PORT=$3
-	echo "Starting OrderService with port $ORDER_PORT and ISCS IP $ISCS_IP and port $ISCS_PORT"
-	java -cp "$script_dir/compiled/OrderService:$script_dir/compiled/json-20231013.jar:$script_dir/compiled/postgresql-42.7.2.jar:$script_dir/compiled/HikariCP-5.1.0.jar:$script_dir/compiled/slf4j-api-1.7.30.jar:$script_dir/compiled/slf4j-simple-1.7.30.jar" OrderService "$ORDER_PORT" "$ISCS_IP:$ISCS_PORT"
+	java -cp "$script_dir/compiled/OrderService:$script_dir/src/jedis-5.2.0-beta1.jar:$script_dir/compiled/json-20231013.jar:$script_dir/compiled/postgresql-42.7.2.jar:$script_dir/compiled/HikariCP-5.1.0.jar:$script_dir/compiled/slf4j-api-1.7.30.jar:$script_dir/compiled/slf4j-simple-1.7.30.jar" OrderService "$ORDER_PORT" "$ISCS_IP:$ISCS_PORT"
 }
 
 # Function to start the WorkloadParser
