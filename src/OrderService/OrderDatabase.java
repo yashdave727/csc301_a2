@@ -79,9 +79,9 @@ class OrderDatabase {
                     "prod_id INT NOT NULL, " +
                     "quantity INT NOT NULL CHECK (quantity > 0), " +
                     "FOREIGN KEY (user_id) REFERENCES users(id) " +
-                    "ON DELETE CASCADE, " +
+                    "ON DELETE NO ACTION, " +
                     "FOREIGN KEY (prod_id) REFERENCES products(id) " +
-                    "ON DELETE CASCADE)"; // TODO: This is not supposed to cascade (we want to see deleted users order history)
+                    "ON DELETE NO ACTION)"; // TODO: This is not supposed to cascade (we want to see deleted users order history)
             statement.execute(sql);
         }
         catch (SQLException e) {
@@ -197,7 +197,8 @@ class OrderDatabase {
 		}
 
             }
-
+	    // Store in Redis when successful
+	    storeInRedis("orders:" + user_id, finalJSON.toString());
             return finalJSON.toString();
         }
         catch (SQLException e) {
@@ -282,6 +283,8 @@ class OrderDatabase {
 
             // User had been updated if any of the columns' values have changed
             if (affectedRows > 0) {
+		// Invalidate the Redis cache
+		invalidateInRedis("product:" + prod_id);
                 return 200;
             }
             else {
@@ -308,6 +311,8 @@ class OrderDatabase {
 
             // User had been updated if any of the columns' values have changed
             if (affectedRows > 0) {
+		// Invalidate the Redis cache
+		invalidateInRedis("user:" + id);
                 return 200;
             }
             // As specified in Piazza post @127
@@ -378,6 +383,8 @@ class OrderDatabase {
             statement.setInt(valueIndex, id);
             int affectedRows = statement.executeUpdate();
             if (affectedRows > 0) {
+		// Invalidate the Redis cache
+		invalidateInRedis("user:" + id);
                 return 200;
             } else {
                 return 404;

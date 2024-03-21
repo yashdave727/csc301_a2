@@ -284,10 +284,11 @@ class UserDatabase {
 
             int affectedRows = statement.executeUpdate();
             if (affectedRows > 0) {
-                // If update was successful, update Redis cache
-                String updatedUserJson = String.format("{\"id\": %d, \"username\": \"%s\", \"email\": \"%s\", \"password\": \"%s\"}",
-                                                        id, username, email, hashPassword(password));
-                storeInRedis("user:" + id, updatedUserJson);
+                // If update was successful, invalidate Redis cache
+//                String updatedUserJson = String.format("{\"id\": %d, \"username\": \"%s\", \"email\": \"%s\", \"password\": \"%s\"}",
+//                                                        id, username, email, hashPassword(password));
+//                storeInRedis("user:" + id, updatedUserJson);
+		invalidateInRedis("user:" + id);
                 return 200;
             } else {
                 return 404; // User not found

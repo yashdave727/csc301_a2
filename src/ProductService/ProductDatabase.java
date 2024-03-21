@@ -287,9 +287,11 @@ public class ProductDatabase {
 
             if (affectedRows > 0) {
                 // After updating the database, update Redis if the product is cached
-                String newProductJson = String.format("{\"id\": %d, \"name\": \"%s\", \"description\": \"%s\", \"price\": %.2f, \"quantity\": %d}",
-                                                       id, name != null ? name : "", description != null ? description : "", price, quantity);
-                storeInRedis("product:" + id, newProductJson);
+//                String newProductJson = String.format("{\"id\": %d, \"name\": \"%s\", \"description\": \"%s\", \"price\": %.2f, \"quantity\": %d}",
+//                                                       id, name != null ? name : "", description != null ? description : "", price, quantity);
+//                storeInRedis("product:" + id, newProductJson);
+		// Invalidate the cache
+		invalidateInRedis("product:" + id);
                 return 200;
             } else {
                 return 404;  // Product not found
