@@ -14,6 +14,7 @@ compile_code() {
     cp -r "$script_dir/src/ISCS/" "$script_dir/compiled/"
     cp "$script_dir/src/json-20231013.jar" "$script_dir/compiled/"
     cp "$script_dir/src/postgresql-42.7.2.jar" "$script_dir/compiled/"
+    cp "$script_dir/src/jedis-5.2.0-beta1.jar" "$script_dir/compiled/"
 
     if [ "$?" -eq 0 ]; then
         echo "Compilation successful."

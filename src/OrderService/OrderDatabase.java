@@ -4,7 +4,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.sql.*;
 import org.json.JSONObject;
-
+import redis.clients.jedis.Jedis;
 /**
  * OrderDatabase class provides methods for managing user data in a SQLite database.
  */
@@ -14,6 +14,8 @@ class OrderDatabase {
     public static String url = "jdbc:postgresql://142.1.44.57:5432/assignmentdb";
     private static final String user = "assignmentuser";
     private static final String password = "assignmentpassword";
+    public static String redisHost = "localhost"; // Change this to your Redis server's IP address
+    public static int redisPort = 6379;
 
 
     /**
@@ -54,6 +56,43 @@ class OrderDatabase {
 	    System.out.println(e.getMessage());
         }
     }
+
+    private Jedis connectToRedis() {
+        try {
+            Jedis jedis = new Jedis(redisHost, redisPort);
+            return jedis; // Successfully connected
+        } catch (Exception e) {
+            System.out.println("Failed to connect to Redis: " + e.getMessage());
+            return null; // Connection failed
+        }
+    }
+
+    public void storeInRedis(String key, String json) {
+        Jedis jedis = connectToRedis();
+        if (jedis != null) {
+            jedis.set(key, json);
+            jedis.close();
+        }
+    }
+
+    public String retrieveFromRedis(String key) {
+        Jedis jedis = connectToRedis();
+        if (jedis != null) {
+            String value = jedis.get(key);
+            jedis.close();
+            return value;
+        }
+        return null;
+    }
+
+    public void invalidateInRedis(String key) {
+        Jedis jedis = connectToRedis();
+        if (jedis != null) {
+            jedis.del(key);
+            jedis.close();
+        }
+    }
+
 
     /**
      * Creates a new user in the database.

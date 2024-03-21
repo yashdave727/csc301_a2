@@ -15,8 +15,8 @@ class UserDatabase {
     public static String url = "jdbc:postgresql://142.1.44.57:5432/assignmentdb";
     private final String user = "assignmentuser";
     private final String password = "assignmentpassword";
-    private static String redisHost = "localhost";  // Change to your Redis host IP
-    private static int redisPort = 6379;
+    public static String redisHost = "localhost";  // Change to your Redis host IP
+    public static int redisPort = 6379;
 
     /**
      * The connect method is used to establish a connection to the database.
@@ -44,7 +44,7 @@ class UserDatabase {
         }
     }
 
-    
+
     public void storeInRedis(String key, String json) {
         Jedis jedis = connectToRedis(); // Adjust host and port if necessary
         if (jedis != null) {
@@ -52,7 +52,7 @@ class UserDatabase {
             jedis.close();
         }
     }
-    
+
     public String retrieveFromRedis(String key) {
         Jedis jedis = connectToRedis(); // Adjust host and port if necessary
         if (jedis != null) {
@@ -62,7 +62,7 @@ class UserDatabase {
         }
         return null;
     }
-    
+
     public void invalidateInRedis(String key) {
         Jedis jedis = connectToRedis(); // Adjust host and port if necessary
         if (jedis != null) {
@@ -70,7 +70,7 @@ class UserDatabase {
             jedis.close();
         }
     }
-    
+
 
 
     /**
@@ -80,8 +80,10 @@ class UserDatabase {
      * @param dbPort is the port number of the database.
      * @param redisPort is the port number of the Redis server.
      */
-    public void initialize(String dockerIp, String dbPort, String redisPort) {
+    public void initialize(String dockerIp, String dbPort, String _redisPort) {
 	url = "jdbc:postgresql://" + dockerIp + ":" + dbPort + "/assignmentdb";
+	redisPort = Integer.parseInt(_redisPort);
+	redisHost = dockerIp;
         try (Connection con = connect();
              Statement statement = con.createStatement()) {
             String sql = "CREATE TABLE IF NOT EXISTS users (" +
@@ -114,12 +116,12 @@ class UserDatabase {
             statement.setString(3, email);
             statement.setString(4, hashPassword(password));
             statement.executeUpdate();
-    
+
             // Cache the new user data in Redis
             String userJson = String.format("{\"id\": %d, \"username\": \"%s\", \"email\": \"%s\", \"password\": \"%s\"}",
                                              id, username, email, hashPassword(password));
             storeInRedis("user:" + id, userJson);
-    
+
             return 200; // OK - User created successfully
         } catch (SQLException e) {
             if (e.getSQLState().equals("23505")) {
@@ -129,7 +131,7 @@ class UserDatabase {
             }
         }
     }
-    
+
 
     /**
      * Retrieves a user's information from the database based on the user ID.
@@ -142,7 +144,7 @@ class UserDatabase {
         if (cachedUser != null) {
             return cachedUser;
         }
-    
+
         // If not in cache, retrieve from database
         String sql = "SELECT id, username, email, password FROM users WHERE id = ?";
         try (Connection con = this.connect();
@@ -187,7 +189,7 @@ class UserDatabase {
             return 400; // Internal Server Error
         }
     }
-    
+
 
     public static String hashPassword(String password) {
         try {
@@ -208,7 +210,7 @@ class UserDatabase {
     public int updateUser(int id, String username, String email, String password) {
         StringBuilder sqlUpdate = new StringBuilder("UPDATE users SET ");
         boolean fieldAdded = false;
-    
+
         if (username != null && !username.isEmpty()) {
             sqlUpdate.append("username = ?, ");
             fieldAdded = true;
@@ -221,14 +223,14 @@ class UserDatabase {
             sqlUpdate.append("password = ?, ");
             fieldAdded = true;
         }
-    
+
         if (!fieldAdded) {
             return 200; // No update needed
         }
-        
+
         sqlUpdate.delete(sqlUpdate.length() - 2, sqlUpdate.length()); // Remove last comma and space
         sqlUpdate.append(" WHERE id = ?");
-    
+
         try (Connection con = this.connect();
              PreparedStatement statement = con.prepareStatement(sqlUpdate.toString())) {
             int index = 1;
@@ -242,7 +244,7 @@ class UserDatabase {
                 statement.setString(index++, hashPassword(password));
             }
             statement.setInt(index, id);
-    
+
             int affectedRows = statement.executeUpdate();
             if (affectedRows > 0) {
                 // If update was successful, update Redis cache
@@ -257,5 +259,5 @@ class UserDatabase {
             return 500; // Internal Server Error
         }
     }
-    
+
 }

@@ -1,3 +1,7 @@
+import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.sql.*;
 import redis.clients.jedis.Jedis;
 
@@ -9,8 +13,8 @@ public class ProductDatabase {
     public static String url = "jdbc:postgresql://142.1.44.57:5432/assignmentdb";
     private final String user = "assignmentuser";
     private final String password = "assignmentpassword";
-    private final String redisHost = "localhost"; // Change this to your Redis server's IP address
-    private final int redisPort = 6379;
+    public static String redisHost = "localhost"; // Change this to your Redis server's IP address
+    public static int redisPort = 6379;
 
     /**
      * The connect method is used to establish a connection to the database.
@@ -26,7 +30,7 @@ public class ProductDatabase {
         }
         return con;
     }
-    
+
     private Jedis connectToRedis() {
         try {
             Jedis jedis = new Jedis(redisHost, redisPort);
@@ -38,15 +42,15 @@ public class ProductDatabase {
     }
 
     public void storeInRedis(String key, String json) {
-        Jedis jedis = connectToRedis(); 
+        Jedis jedis = connectToRedis();
         if (jedis != null) {
             jedis.set(key, json);
             jedis.close();
         }
     }
-    
+
     public String retrieveFromRedis(String key) {
-        Jedis jedis = connectToRedis(); 
+        Jedis jedis = connectToRedis();
         if (jedis != null) {
             String value = jedis.get(key);
             jedis.close();
@@ -54,16 +58,16 @@ public class ProductDatabase {
         }
         return null;
     }
-    
+
     public void invalidateInRedis(String key) {
-        Jedis jedis = connectToRedis(); 
+        Jedis jedis = connectToRedis();
         if (jedis != null) {
             jedis.del(key);
             jedis.close();
         }
     }
-    
-    
+
+
 
     /**
      * The initialize method which is used in the constructor is for initializing the database by creating a table
@@ -72,8 +76,10 @@ public class ProductDatabase {
      * @param dbPort is the port number of the database.
      * @param redisPort is the port number of the Redis server.
      */
-    public void initialize(String dockerIp, String dbPort, String redisPort) {
+    public void initialize(String dockerIp, String dbPort, String _redisPort) {
 	url = "jdbc:postgresql://" + dockerIp + ":" + dbPort + "/assignmentdb";
+	redisPort = Integer.parseInt(_redisPort);
+	redisHost = dockerIp;
         try (Connection con = connect();
              Statement statement = con.createStatement()) {
             String sql = "CREATE TABLE IF NOT EXISTS products (" +
@@ -100,7 +106,7 @@ public class ProductDatabase {
         if (cachedProduct != null) {
             return cachedProduct;
         }
-    
+
         // If not in cache, retrieve from database
         String sql = "SELECT id, name, description, price, quantity FROM products WHERE id = ?";
         try (Connection con = this.connect();
@@ -119,17 +125,17 @@ public class ProductDatabase {
         }
         return "";
     }
-    
+
 
 
     public int createProduct(int id, String name, String description, float price, int quantity) {
         String sql = "INSERT INTO products(id, name, description, price, quantity) VALUES(?, ?, ?, ?, ?)";
-        
+
         // Check if the price or quantity is a negative value and return 400 for bad request.
         if (price < 0 || quantity < 0) {
             return 400;
         }
-        
+
         try (Connection con = this.connect();
              PreparedStatement statement = con.prepareStatement(sql)) {
             statement.setInt(1, id);
@@ -138,7 +144,7 @@ public class ProductDatabase {
             statement.setFloat(4, price);
             statement.setInt(5, quantity);
             int result = statement.executeUpdate();
-            
+
             if (result > 0) {
                 String productJson = String.format("{\"id\": %d, \"name\": \"%s\", \"description\": \"%s\", \"price\": %.2f, \"quantity\": %d}",
                                                     id, name, description, price, quantity);
@@ -154,9 +160,9 @@ public class ProductDatabase {
         }
         return 400;  // Default error if insertion failed
     }
-    
 
-    
+
+
     public int deleteProduct(int id, String name, float price, int quantity) {
         String sql = "DELETE FROM products WHERE id = ? AND name = ? AND price = ? AND" +
                 " quantity = ?";
@@ -190,11 +196,11 @@ public class ProductDatabase {
     public int updateProduct(int id, String name, String description, float price, int quantity) {
         StringBuilder sqlUpdate = new StringBuilder("UPDATE products SET ");
         int valueCount = 0;
-    
+
         if ((price != 0 && price < 0) || (quantity != 0 && quantity < 0)) {
             return 400;  // Bad request due to negative price or quantity
         }
-    
+
         // Construct the SQL update statement based on provided values
         if (name != null) {
             sqlUpdate.append("name = ?, ");
@@ -212,18 +218,18 @@ public class ProductDatabase {
             sqlUpdate.append("quantity = ?, ");
             valueCount++;
         }
-    
+
         if (valueCount == 0) {
             return 200;  // No update was needed
         }
-        
+
         sqlUpdate.delete(sqlUpdate.length() - 2, sqlUpdate.length());  // Remove trailing comma and space
         sqlUpdate.append(" WHERE id = ?");
-        
+
         try (Connection conn = this.connect();
              PreparedStatement statement = conn.prepareStatement(sqlUpdate.toString())) {
             int valueIndex = 1;
-    
+
             // Set values for the update statement
             if (name != null) {
                 statement.setString(valueIndex++, name);
@@ -238,9 +244,9 @@ public class ProductDatabase {
                 statement.setInt(valueIndex++, quantity);
             }
             statement.setInt(valueIndex, id);
-    
+
             int affectedRows = statement.executeUpdate();
-    
+
             if (affectedRows > 0) {
                 // After updating the database, update Redis if the product is cached
                 String newProductJson = String.format("{\"id\": %d, \"name\": \"%s\", \"description\": \"%s\", \"price\": %.2f, \"quantity\": %d}",
@@ -254,7 +260,7 @@ public class ProductDatabase {
             return 400;  // Internal Server Error
         }
     }
-    
+
 
 
 }
