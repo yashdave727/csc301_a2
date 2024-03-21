@@ -46,6 +46,11 @@ public class UserService
             System.exit(1);
         }
 
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+        System.out.println("Shutting down User Database connection pool...");
+        userDB.shutdownPool();
+        }));
+
         port = Integer.parseInt(args[0]);
 	dockerIp = args[1];
 	dbPort = args[2];
@@ -136,35 +141,37 @@ public class UserService
     private static void create(HttpExchange exchange, JSONObject jsonObject) throws IOException {
         try {
             // Check if all required fields are present, including the ID
-            if (!jsonObject.has("id") || !jsonObject.has("username") || !jsonObject.has("email") || !jsonObject.has("password")) {
-                //("HELLO 130");
-		sendResponse(exchange, 400, new JSONObject().toString());
-                return;
-            }
+            if (jsonObject.has("id") && jsonObject.has("username") && jsonObject.has("email") && jsonObject.has("password")) {
 
-            JSONObject responseBody = new JSONObject();
+	            JSONObject responseBody = new JSONObject();
 
-            // Extracting data from JSON object
-            int id = jsonObject.getInt("id");
-            String username = jsonObject.getString("username");
-            String email = jsonObject.getString("email");
-            String password = jsonObject.getString("password"); // Consider hashing
+	            // Extracting data from JSON object
+	            int id = jsonObject.getInt("id");
+	            String username = jsonObject.getString("username");
+	            String email = jsonObject.getString("email");
+	            String password = jsonObject.getString("password"); // Consider hashing
 
-            // Attempt to create a new user in the database, passing the ID
-            int statusCode = userDB.createUser(id, username, email, password);
+	            // Attempt to create a new user in the database, passing the ID
+	            int statusCode = userDB.createUser(id, username, email, password);
 
-            responseBody.put("id", id);
-            responseBody.put("username", username);
-            responseBody.put("email", email);
-            responseBody.put("password", UserDatabase.hashPassword(password));
+	            responseBody.put("id", id);
+	            responseBody.put("username", username);
+	            responseBody.put("email", email);
+	            responseBody.put("password", UserDatabase.hashPassword(password));
 
-            if (statusCode == 200) {
-                sendResponse(exchange, 200, responseBody.toString());
-            } else {
-                sendResponse(exchange, 409, new JSONObject().toString());
-            }
+	            if (statusCode == 200) {
+	                sendResponse(exchange, 200, responseBody.toString());
+			return;
+	            } else {
+	                sendResponse(exchange, 409, new JSONObject().toString());
+			return;
+	            }
+		} else {
+			sendResponse(exchange, 400, new JSONObject().toString());
+	                return;
+		}
         } catch (Exception e) {
-            // e.printStackTrace();
+            e.printStackTrace();
             //("HELLO 158");
 	    sendResponse(exchange, 400, new JSONObject().toString());
         }
@@ -196,13 +203,15 @@ public class UserService
                     // Use getUser() to retrieve user data along with the hashed password.
                     String userData = userDB.getUser(id);
                     sendResponse(exchange, updateStatus, new JSONObject(userData).toString());
-
+		    return;
                 } else {
                     sendResponse(exchange, updateStatus, new JSONObject().toString());
+		    return;
                 }
             } else {
 		//("HELLO (In Order Service Update)");
                 sendResponse(exchange, 400, new JSONObject().toString());
+		return;
             }
         }
         catch (Exception e)
@@ -237,9 +246,11 @@ public class UserService
                 // The deletion is valid, and return empty response with status code 200.
                 if (deleteStatus == 200) {
                     sendResponse(exchange, deleteStatus, new JSONObject().toString());
+		    return;
                 }
                 else {
                     sendResponse(exchange, deleteStatus, new JSONObject().toString());
+		    return;
                 }
             }
             // The fields provided are invalid
@@ -288,10 +299,12 @@ public class UserService
                 if (userData.isEmpty()) {
                     // User is not found - 404
                     sendResponse(exchange, 404, new JSONObject().toString());
+		    return;
                 }
                 else {
                     // Valid response, which returns user's data - id, username, email, hashed password
                     sendResponse(exchange, 200, new JSONObject(userData).toString());
+		    return;
                 }
             }
             catch (NumberFormatException e) {

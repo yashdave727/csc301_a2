@@ -45,6 +45,11 @@ public class ProductService
             System.exit(1);
         }
 
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+        System.out.println("Shutting down User Database connection pool...");
+        productDB.shutdownPool();
+        }));
+
         port = Integer.parseInt(args[0]);
 	dockerIp = args[1];
 	dbPort = args[2];
@@ -160,13 +165,16 @@ public class ProductService
                     responseBody.put("quantity", quantity);
 		    //(responseBody.toString());
                     sendResponse(exchange, createStatus, responseBody.toString());
+		    return;
                 } else {
                     sendResponse(exchange, createStatus, new JSONObject().toString());
+		    return;
                 }
             }
             // The fields provided are invalid
             else {
                 sendResponse(exchange, 400, new JSONObject().toString());
+		return;
             }
         }
         catch (Exception e)
@@ -205,11 +213,14 @@ public class ProductService
                     // Retrieve updated product data to include in the response.
                     String productData = productDB.getProduct(id);
                     sendResponse(exchange, updateStatus, new JSONObject(productData).toString());
+		    return;
                 } else {
                     sendResponse(exchange, updateStatus, new JSONObject().toString());
+		    return;
                 }
             } else {
                 sendResponse(exchange, 400, new JSONObject().toString());
+		return;
             }
         }
         catch (Exception e)
@@ -245,14 +256,17 @@ public class ProductService
                 // The deletion is valid, and return empty response with status code 200.
                 if (deleteStatus == 200) {
                     sendResponse(exchange, deleteStatus, new JSONObject().toString());
+		    return;
                 }
                 else {
                     sendResponse(exchange, deleteStatus, new JSONObject().toString());
+		    return;
                 }
             }
             // The fields provided are invalid
             else {
                 sendResponse(exchange, 400, new JSONObject().toString());
+		return;
             }
         }
         catch (Exception e)
@@ -288,9 +302,11 @@ public class ProductService
                 String productData = productDB.getProduct(productId);
                 if (productData.isEmpty()) {
                     sendResponse(exchange, 404, new JSONObject().toString());
+		    return;
                 } else {
                     // Valid response, which returns product's data: id, name, description, price, quantity
                     sendResponse(exchange, 200, new JSONObject(productData).toString());
+		    return;
                 }
             }
             catch (Exception e)

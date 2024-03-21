@@ -1,10 +1,12 @@
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.sql.*;
 import org.json.JSONObject;
-
+import redis.clients.jedis.Jedis;
 /**
  * OrderDatabase class provides methods for managing user data in a SQLite database.
  */
@@ -14,29 +16,61 @@ class OrderDatabase {
     public static String url = "jdbc:postgresql://142.1.44.57:5432/assignmentdb";
     private static final String user = "assignmentuser";
     private static final String password = "assignmentpassword";
+    public static String redisHost = "localhost"; // Change this to your Redis server's IP address
+    public static int redisPort = 6379;
+    public static HikariDataSource dataSource;
+
+ //    static {
+ //        // Configure HikariCP
+ //        HikariConfig config = new HikariConfig();
+ //        // Adjust the JDBC URL, username, and password to match your PostgreSQL container setup
+ //        config.setJdbcUrl("jdbc:postgresql://142.1.44.57:5432/assignmentdb");
+ //        config.setUsername("assignmentuser");
+ //        config.setPassword("assignmentpassword");
+ //
+ //        // // Optional: Configure additional HikariCP settings as needed
+ //        // config.addDataSourceProperty("cachePrepStmts", "true");
+ //        // config.addDataSourceProperty("prepStmtCacheSize", "250");
+ //        // config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
+ //
+ //        dataSource = new HikariDataSource(config);
+ //    }
 
 
     /**
      * The connect method is used to establish a connection to the SQLite database.
      * @return value is a connection object to the SQLite database.
      */
-    private Connection connect() {
-        Connection con = null;
-        try {
-	    // TODO: Add REDIS connection
-            con = DriverManager.getConnection(url, user, password);
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-        }
-        return con;
+    private Connection connect() throws SQLException {
+        return dataSource.getConnection();
     }
 
     /**
      * The initialize method which is used in the constructor is for initializing the database by creating a table
      * for users if it does not already exist.
      */
-    public void initialize(String dockerIp, String dbPort, String redisPort) {
+    public void initialize(String dockerIp, String dbPort, String _redisPort) {
 	url = "jdbc:postgresql://" + dockerIp + ":" + dbPort + "/assignmentdb";
+	redisPort = Integer.parseInt(_redisPort);
+	redisHost = dockerIp;
+
+	// Configure HikariCP
+	HikariConfig config = new HikariConfig();
+	config.setJdbcUrl(url);
+	config.setUsername(user);
+	config.setPassword(password);
+
+	dataSource = new HikariDataSource(config);
+
+	// Test redis connection
+	Jedis jedis = connectToRedis();
+	if (jedis != null) {
+		System.out.println("Connected to Redis server at " + redisHost + ":" + redisPort);
+		jedis.close();
+	} else {
+		System.out.println("Failed to connect to Redis server at " + redisHost + ":" + redisPort);
+	}
+
         try (Connection con = connect();
             Statement statement = con.createStatement()) {
             String sql = "CREATE TABLE IF NOT EXISTS orders (" +
@@ -45,13 +79,69 @@ class OrderDatabase {
                     "prod_id INT NOT NULL, " +
                     "quantity INT NOT NULL CHECK (quantity > 0), " +
                     "FOREIGN KEY (user_id) REFERENCES users(id) " +
-                    "ON DELETE CASCADE, " +
+                    "ON DELETE NO ACTION, " +
                     "FOREIGN KEY (prod_id) REFERENCES products(id) " +
-                    "ON DELETE CASCADE)"; // TODO: This is not supposed to cascade (we want to see deleted users order history)
+                    "ON DELETE NO ACTION)"; // TODO: This is not supposed to cascade (we want to see deleted users order history)
             statement.execute(sql);
         }
         catch (SQLException e) {
 	    System.out.println(e.getMessage());
+        }
+    }
+
+    private Jedis connectToRedis() {
+        try {
+            Jedis jedis = new Jedis(redisHost, redisPort);
+            return jedis; // Successfully connected
+        } catch (Exception e) {
+            System.out.println("Failed to connect to Redis: " + e.getMessage());
+            return null; // Connection failed
+        }
+    }
+
+    public void storeInRedis(String key, String json) {
+	try {
+	        Jedis jedis = connectToRedis(); // Adjust host and port if necessary
+	        if (jedis != null) {
+	            jedis.set(key, json);
+	            jedis.close();
+	        }
+	} catch (Exception e) {
+		System.out.println("Failed to store in Redis: " + e.getMessage());
+	}
+    }
+
+    public String retrieveFromRedis(String key) {
+	try {
+	        Jedis jedis = connectToRedis(); // Adjust host and port if necessary
+	        if (jedis != null) {
+	            String value = jedis.get(key);
+	            jedis.close();
+	            return value;
+	        }
+        return null;
+	} catch (Exception e) {
+		System.out.println("Failed to retrieve from Redis: " + e.getMessage());
+		return null;
+	}
+    }
+
+    public void invalidateInRedis(String key) {
+	try {
+	        Jedis jedis = connectToRedis(); // Adjust host and port if necessary
+	        if (jedis != null) {
+	            jedis.del(key);
+	            jedis.close();
+	        }
+	} catch (Exception e) {
+		System.out.println("Failed to invalidate in Redis: " + e.getMessage());
+	}
+    }
+
+    public static void shutdownPool() {
+        if (dataSource != null && !dataSource.isClosed()) {
+            dataSource.close();
+            System.out.println("Order Database connection pool successfully shut down.");
         }
     }
 
@@ -72,7 +162,8 @@ class OrderDatabase {
             statement.executeUpdate();
 
             int updated = updateQuantity(prod_id, newQuantity);
-
+	    // Invalidate the Redis cache
+	    invalidateInRedis("orders:" + user_id);
             return updated; // OK - User created successfully
         }
         // The PostgreSQL 23505 UNIQUE VIOLATION error occurs when a unique constraint is violated. See the link below
@@ -94,6 +185,12 @@ class OrderDatabase {
      * @return A JSON string containing the products ID as a key and quantity as a value
      */
     public String getPurchased(int user_id) {
+	// Attempt to retrieve from Redis
+	String cachedOrder = retrieveFromRedis("orders:" + user_id);
+	if (cachedOrder != null) {
+		return cachedOrder;
+	}
+
         String sql = "SELECT prod_id, quantity FROM orders WHERE user_id = ?";
         try (Connection con = this.connect();
              PreparedStatement statement = con.prepareStatement(sql)) {
@@ -112,7 +209,8 @@ class OrderDatabase {
 		}
 
             }
-
+	    // Store in Redis when successful
+	    storeInRedis("orders:" + user_id, finalJSON.toString());
             return finalJSON.toString();
         }
         catch (SQLException e) {
@@ -126,6 +224,11 @@ class OrderDatabase {
      * @return A JSON string containing the user's information, or an empty string if not found.
      */
     public String getUser(int id) {
+	// Attempt to retrieve from Redis
+	String cachedUser = retrieveFromRedis("user:" + id);
+	if (cachedUser != null) {
+		return cachedUser;
+	}
         String sql = "SELECT id, username, email, password FROM users WHERE id = ?";
         try (Connection con = this.connect();
              PreparedStatement statement = con.prepareStatement(sql)) {
@@ -153,6 +256,11 @@ class OrderDatabase {
      * @return A JSON string containing the user's information, or an empty string if not found.
      */
     public String getProduct(int id) {
+	// Attempt to retrieve from Redis
+	String cachedProduct = retrieveFromRedis("product:" + id);
+	if (cachedProduct != null) {
+		return cachedProduct;
+	}
         String sql = "SELECT id, name, description, price, quantity FROM products WHERE id = ?"; // Make sure the table name is 'products' not 'users'
         try (Connection con = this.connect();
              PreparedStatement statement = con.prepareStatement(sql)) {
@@ -187,6 +295,8 @@ class OrderDatabase {
 
             // User had been updated if any of the columns' values have changed
             if (affectedRows > 0) {
+		// Invalidate the Redis cache
+		invalidateInRedis("product:" + prod_id);
                 return 200;
             }
             else {
@@ -213,6 +323,8 @@ class OrderDatabase {
 
             // User had been updated if any of the columns' values have changed
             if (affectedRows > 0) {
+		// Invalidate the Redis cache
+		invalidateInRedis("user:" + id);
                 return 200;
             }
             // As specified in Piazza post @127
@@ -283,6 +395,8 @@ class OrderDatabase {
             statement.setInt(valueIndex, id);
             int affectedRows = statement.executeUpdate();
             if (affectedRows > 0) {
+		// Invalidate the Redis cache
+		invalidateInRedis("user:" + id);
                 return 200;
             } else {
                 return 404;

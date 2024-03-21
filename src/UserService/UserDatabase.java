@@ -1,8 +1,12 @@
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.sql.*;
+
+import redis.clients.jedis.Jedis;
 
 /**
  * UserDatabase class provides methods for managing user data in a SQLite database.
@@ -13,21 +17,86 @@ class UserDatabase {
     public static String url = "jdbc:postgresql://142.1.44.57:5432/assignmentdb";
     private final String user = "assignmentuser";
     private final String password = "assignmentpassword";
+    public static String redisHost = "localhost";  // Change to your Redis host IP
+    public static int redisPort = 6379;
+    public static HikariDataSource dataSource;
+
+//    static {
+//        // Configure HikariCP
+//        HikariConfig config = new HikariConfig();
+//        // Adjust the JDBC URL, username, and password to match your PostgreSQL container setup
+//        config.setJdbcUrl("jdbc:postgresql://142.1.44.57:5432/assignmentdb");
+//        config.setUsername("assignmentuser");
+//        config.setPassword("assignmentpassword");
+//
+//        // // Optional: Configure additional HikariCP settings as needed
+//        // config.addDataSourceProperty("cachePrepStmts", "true");
+//        // config.addDataSourceProperty("prepStmtCacheSize", "250");
+//        // config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
+//
+//        dataSource = new HikariDataSource(config);
+//    }
 
     /**
      * The connect method is used to establish a connection to the database.
      * @return value is a connection object to the SQLite database.
      */
-    private Connection connect() {
-        Connection con = null;
-        try {
-	    // TODO: Add REDIS connection
-            con = DriverManager.getConnection(url, user, password);
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-        }
-        return con;
+    private Connection connect() throws SQLException {
+        return dataSource.getConnection();
     }
+
+
+    private Jedis connectToRedis() {
+        try {
+            Jedis jedis = new Jedis(redisHost, redisPort);
+            return jedis; // Successfully connected
+        } catch (Exception e) {
+            System.out.println("Failed to connect to Redis: " + e.getMessage());
+            return null; // Connection failed
+        }
+    }
+
+
+    public void storeInRedis(String key, String json) {
+	try {
+	        Jedis jedis = connectToRedis(); // Adjust host and port if necessary
+	        if (jedis != null) {
+	            jedis.set(key, json);
+	            jedis.close();
+	        }
+	} catch (Exception e) {
+		System.out.println("Failed to store in Redis: " + e.getMessage());
+	}
+    }
+
+    public String retrieveFromRedis(String key) {
+	try {
+	        Jedis jedis = connectToRedis(); // Adjust host and port if necessary
+	        if (jedis != null) {
+	            String value = jedis.get(key);
+	            jedis.close();
+	            return value;
+	        }
+        return null;
+	} catch (Exception e) {
+		System.out.println("Failed to retrieve from Redis: " + e.getMessage());
+		return null;
+	}
+    }
+
+    public void invalidateInRedis(String key) {
+	try {
+	        Jedis jedis = connectToRedis(); // Adjust host and port if necessary
+	        if (jedis != null) {
+	            jedis.del(key);
+	            jedis.close();
+	        }
+	} catch (Exception e) {
+		System.out.println("Failed to invalidate in Redis: " + e.getMessage());
+	}
+    }
+
+
 
     /**
      * The initialize method which is used in the constructor is for initializing the database by creating a table
@@ -36,8 +105,28 @@ class UserDatabase {
      * @param dbPort is the port number of the database.
      * @param redisPort is the port number of the Redis server.
      */
-    public void initialize(String dockerIp, String dbPort, String redisPort) {
+    public void initialize(String dockerIp, String dbPort, String _redisPort) {
 	url = "jdbc:postgresql://" + dockerIp + ":" + dbPort + "/assignmentdb";
+	redisPort = Integer.parseInt(_redisPort);
+	redisHost = dockerIp;
+
+	// Configure HikariCP
+	HikariConfig config = new HikariConfig();
+	config.setJdbcUrl(url);
+	config.setUsername(user);
+	config.setPassword(password);
+
+	dataSource = new HikariDataSource(config);
+
+	// Test redis connection
+	Jedis jedis = connectToRedis();
+	if (jedis != null) {
+		System.out.println("Connected to Redis server at " + redisHost + ":" + redisPort);
+		jedis.close();
+	} else {
+		System.out.println("Failed to connect to Redis server at " + redisHost + ":" + redisPort);
+	}
+
         try (Connection con = connect();
              Statement statement = con.createStatement()) {
             String sql = "CREATE TABLE IF NOT EXISTS users (" +
@@ -50,6 +139,13 @@ class UserDatabase {
         }
         catch (SQLException e) {
             System.out.println(e.getMessage());
+        }
+    }
+
+    public static void shutdownPool() {
+        if (dataSource != null && !dataSource.isClosed()) {
+            dataSource.close();
+            System.out.println("User Database connection pool successfully shut down.");
         }
     }
 
@@ -68,22 +164,24 @@ class UserDatabase {
             statement.setInt(1, id);
             statement.setString(2, username);
             statement.setString(3, email);
-            statement.setString(4, password);
+            statement.setString(4, hashPassword(password));
             statement.executeUpdate();
+
+            // Cache the new user data in Redis
+            String userJson = String.format("{\"id\": %d, \"username\": \"%s\", \"email\": \"%s\", \"password\": \"%s\"}",
+                                             id, username, email, hashPassword(password));
+            storeInRedis("user:" + id, userJson);
+
             return 200; // OK - User created successfully
-        }
-        // The PostgreSQL 23505 UNIQUE VIOLATION error occurs when a unique constraint is violated. See the link below
-        // https://www.metisdata.io/knowledgebase/errors/postgresql-23505#:~:text=The%20PostgreSQL%
-        // 2023505%20UNIQUE%20VIOLATION,fail%20to%20complete%20the%20operation.
-        catch (SQLException e) {
+        } catch (SQLException e) {
             if (e.getSQLState().equals("23505")) {
                 return 409; // Duplicate entry
-            }
-            else {
+            } else {
                 return 400; // Internal Server Error
             }
         }
     }
+
 
     /**
      * Retrieves a user's information from the database based on the user ID.
@@ -91,22 +189,27 @@ class UserDatabase {
      * @return A JSON string containing the user's information, or an empty string if not found.
      */
     public String getUser(int id) {
+        // Attempt to retrieve from Redis first
+        String cachedUser = retrieveFromRedis("user:" + id);
+        if (cachedUser != null) {
+            return cachedUser;
+        }
+
+        // If not in cache, retrieve from database
         String sql = "SELECT id, username, email, password FROM users WHERE id = ?";
         try (Connection con = this.connect();
              PreparedStatement statement = con.prepareStatement(sql)) {
             statement.setInt(1, id);
-            ResultSet current = statement.executeQuery();
-            if (current.next()) {
-                int userId = current.getInt("id");
-                String username = current.getString("username");
-                String email = current.getString("email");
-                String encryptedPassword = hashPassword(current.getString("password"));
-                return String.format("{\"id\": %d, \"username\": \"%s\"," +
-                        " \"email\": \"%s\", \"password\": \"%s\"}", userId, username, email, encryptedPassword);
+            ResultSet rs = statement.executeQuery();
+            if (rs.next()) {
+                String userJson = String.format("{\"id\": %d, \"username\": \"%s\", \"email\": \"%s\", \"password\": \"%s\"}",
+                                                 rs.getInt("id"), rs.getString("username"), rs.getString("email"), hashPassword(rs.getString("password")));
+                // Store in Redis for future requests
+                storeInRedis("user:" + id, userJson);
+                return userJson;
             }
-        }
-        catch (SQLException e) {
-            return "";
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
         }
         return "";
     }
@@ -124,6 +227,7 @@ class UserDatabase {
 
             // User had been updated if any of the columns' values have changed
             if (affectedRows > 0) {
+                invalidateInRedis("user:" + id);
                 return 200;
             }
             // As specified in Piazza post @127
@@ -135,6 +239,7 @@ class UserDatabase {
             return 400; // Internal Server Error
         }
     }
+
 
     public static String hashPassword(String password) {
         try {
@@ -153,54 +258,57 @@ class UserDatabase {
     }
 
     public int updateUser(int id, String username, String email, String password) {
-        // Concatenate the update statement and track if a field is added to the query.
         StringBuilder sqlUpdate = new StringBuilder("UPDATE users SET ");
-        boolean isFieldAdded = false;
+        boolean fieldAdded = false;
 
-        // Append the fields to the SQL query if they are provided
         if (username != null && !username.isEmpty()) {
             sqlUpdate.append("username = ?, ");
-            isFieldAdded = true;
+            fieldAdded = true;
         }
         if (email != null && !email.isEmpty()) {
             sqlUpdate.append("email = ?, ");
-            isFieldAdded = true;
+            fieldAdded = true;
         }
         if (password != null && !password.isEmpty()) {
             sqlUpdate.append("password = ?, ");
-            isFieldAdded = true;
+            fieldAdded = true;
         }
 
-        // Return 200 to imply that no fields have been updated but still a success (although no change in the db)
-        if (!isFieldAdded) {
-            return 200;
+        if (!fieldAdded) {
+            return 200; // No update needed
         }
-        sqlUpdate.setLength(sqlUpdate.length() - 2);
+
+        sqlUpdate.delete(sqlUpdate.length() - 2, sqlUpdate.length()); // Remove last comma and space
         sqlUpdate.append(" WHERE id = ?");
+
         try (Connection con = this.connect();
              PreparedStatement statement = con.prepareStatement(sqlUpdate.toString())) {
-
-            // Set parameters for each field
-            int valueIndex = 1;
+            int index = 1;
             if (username != null && !username.isEmpty()) {
-                statement.setString(valueIndex++, username);
+                statement.setString(index++, username);
             }
             if (email != null && !email.isEmpty()) {
-                statement.setString(valueIndex++, email);
+                statement.setString(index++, email);
             }
             if (password != null && !password.isEmpty()) {
-                statement.setString(valueIndex++, password);
+                statement.setString(index++, hashPassword(password));
             }
-            statement.setInt(valueIndex, id);
+            statement.setInt(index, id);
+
             int affectedRows = statement.executeUpdate();
             if (affectedRows > 0) {
+                // If update was successful, invalidate Redis cache
+//                String updatedUserJson = String.format("{\"id\": %d, \"username\": \"%s\", \"email\": \"%s\", \"password\": \"%s\"}",
+//                                                        id, username, email, hashPassword(password));
+//                storeInRedis("user:" + id, updatedUserJson);
+		invalidateInRedis("user:" + id);
                 return 200;
             } else {
-                return 404;
+                return 404; // User not found
             }
-        }
-        catch (SQLException e) {
-            return 400; // Internal Server Error
+        } catch (SQLException e) {
+            return 500; // Internal Server Error
         }
     }
+
 }

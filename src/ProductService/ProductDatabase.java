@@ -1,27 +1,99 @@
+import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import java.sql.*;
+import redis.clients.jedis.Jedis;
+
 
 /**
- * UserDatabase class provides methods for managing user data in a SQLite database.
+ * UserDatabase class provides methods for managing user data in a database.
  */
 public class ProductDatabase {
     public static String url = "jdbc:postgresql://142.1.44.57:5432/assignmentdb";
     private final String user = "assignmentuser";
     private final String password = "assignmentpassword";
+    public static String redisHost = "localhost"; // Change this to your Redis server's IP address
+    public static int redisPort = 6379;
+
+    public static HikariDataSource dataSource;
+
+//    static {
+//        // Configure HikariCP
+//        HikariConfig config = new HikariConfig();
+//        // Adjust the JDBC URL, username, and password to match your PostgreSQL container setup
+//        config.setJdbcUrl("jdbc:postgresql://142.1.44.57:5432/assignmentdb");
+//        config.setUsername("assignmentuser");
+//        config.setPassword("assignmentpassword");
+//
+//        // // Optional: Configure additional HikariCP settings as needed
+//        // config.addDataSourceProperty("cachePrepStmts", "true");
+//        // config.addDataSourceProperty("prepStmtCacheSize", "250");
+//        // config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
+//
+//        dataSource = new HikariDataSource(config);
+//    }
 
     /**
      * The connect method is used to establish a connection to the database.
-     * @return value is a connection object to the SQLite database.
+     * @return value is a connection object to the database.
      */
-    private Connection connect() {
-        Connection con = null;
-        try {
-	    // TODO: Add REDIS connection
-            con = DriverManager.getConnection(url, user, password);
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-        }
-        return con;
+    private Connection connect() throws SQLException {
+        return dataSource.getConnection();
     }
+
+    private Jedis connectToRedis() {
+        try {
+            Jedis jedis = new Jedis(redisHost, redisPort);
+            return jedis; // Successfully connected
+        } catch (Exception e) {
+            System.out.println("Failed to connect to Redis: " + e.getMessage());
+            return null; // Connection failed
+        }
+    }
+
+    public void storeInRedis(String key, String json) {
+	try {
+	        Jedis jedis = connectToRedis();
+	        if (jedis != null) {
+	            jedis.set(key, json);
+	            jedis.close();
+	        }
+	} catch (Exception e) {
+		System.out.println("Failed to store in Redis: " + e.getMessage());
+	}
+    }
+
+    public String retrieveFromRedis(String key) {
+	try {
+	        Jedis jedis = connectToRedis();
+	        if (jedis != null) {
+	            String value = jedis.get(key);
+	            jedis.close();
+	            return value;
+	        }
+	        return null;
+	} catch (Exception e) {
+		System.out.println("Failed to retrieve from Redis: " + e.getMessage());
+		return null;
+	}
+    }
+
+    public void invalidateInRedis(String key) {
+	try {
+	        Jedis jedis = connectToRedis();
+	        if (jedis != null) {
+	            jedis.del(key);
+	            jedis.close();
+	        }
+	} catch (Exception e) {
+		System.out.println("Failed to invalidate in Redis: " + e.getMessage());
+	}
+    }
+
+
 
     /**
      * The initialize method which is used in the constructor is for initializing the database by creating a table
@@ -30,8 +102,28 @@ public class ProductDatabase {
      * @param dbPort is the port number of the database.
      * @param redisPort is the port number of the Redis server.
      */
-    public void initialize(String dockerIp, String dbPort, String redisPort) {
+    public void initialize(String dockerIp, String dbPort, String _redisPort) {
 	url = "jdbc:postgresql://" + dockerIp + ":" + dbPort + "/assignmentdb";
+	redisPort = Integer.parseInt(_redisPort);
+	redisHost = dockerIp;
+
+	// Configure HikariCP
+	HikariConfig config = new HikariConfig();
+	config.setJdbcUrl(url);
+	config.setUsername(user);
+	config.setPassword(password);
+
+	dataSource = new HikariDataSource(config);
+
+	// Test redis connection
+	Jedis jedis = connectToRedis();
+	if (jedis != null) {
+		System.out.println("Connected to Redis server at " + redisHost + ":" + redisPort);
+		jedis.close();
+	} else {
+		System.out.println("Failed to connect to Redis server at " + redisHost + ":" + redisPort);
+	}
+
         try (Connection con = connect();
              Statement statement = con.createStatement()) {
             String sql = "CREATE TABLE IF NOT EXISTS products (" +
@@ -46,6 +138,13 @@ public class ProductDatabase {
         }
     }
 
+    public static void shutdownPool() {
+        if (dataSource != null && !dataSource.isClosed()) {
+            dataSource.close();
+            System.out.println("User Database connection pool successfully shut down.");
+        }
+    }
+
     /**
      * Retrieves a user's information from the database based on the user ID.
      *
@@ -53,27 +152,32 @@ public class ProductDatabase {
      * @return A JSON string containing the user's information, or an empty string if not found.
      */
     public String getProduct(int id) {
-        String sql = "SELECT id, name, description, price, quantity FROM products WHERE id = ?"; // Make sure the table name is 'products' not 'users'
+        // Attempt to retrieve from Redis first
+        String cachedProduct = retrieveFromRedis("product:" + id);
+        if (cachedProduct != null) {
+            return cachedProduct;
+        }
+
+        // If not in cache, retrieve from database
+        String sql = "SELECT id, name, description, price, quantity FROM products WHERE id = ?";
         try (Connection con = this.connect();
              PreparedStatement statement = con.prepareStatement(sql)) {
             statement.setInt(1, id);
-            ResultSet current = statement.executeQuery();
-            if (current.next()) {
-                int productId = current.getInt("id");
-                String name = current.getString("name");
-                String description = current.getString("description");
-                float price = current.getFloat("price"); // Use getFloat for price
-                int quantity = current.getInt("quantity"); // Use getInt for quantity
-                return String.format("{\"id\": %d, \"name\": \"%s\"," +
-                                " \"description\": \"%s\", \"price\": %.2f, \"quantity\": %d}\n", productId, name, description,
-                        price, quantity);
+            ResultSet rs = statement.executeQuery();
+            if (rs.next()) {
+                String productJson = String.format("{\"id\": %d, \"name\": \"%s\", \"description\": \"%s\", \"price\": %.2f, \"quantity\": %d}",
+                    rs.getInt("id"), rs.getString("name"), rs.getString("description"), rs.getFloat("price"), rs.getInt("quantity"));
+                // Store in Redis for future requests
+                storeInRedis("product:" + id, productJson);
+                return productJson;
             }
-        }
-        catch (SQLException e) {
-            return "";
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
         }
         return "";
     }
+
+
 
     public int createProduct(int id, String name, String description, float price, int quantity) {
         String sql = "INSERT INTO products(id, name, description, price, quantity) VALUES(?, ?, ?, ?, ?)";
@@ -90,18 +194,25 @@ public class ProductDatabase {
             statement.setString(3, description);
             statement.setFloat(4, price);
             statement.setInt(5, quantity);
-            statement.executeUpdate();
-            return 200;
-        }
-        catch (SQLException e) {
+            int result = statement.executeUpdate();
+
+            if (result > 0) {
+                String productJson = String.format("{\"id\": %d, \"name\": \"%s\", \"description\": \"%s\", \"price\": %.2f, \"quantity\": %d}",
+                                                    id, name, description, price, quantity);
+                storeInRedis("product:" + id, productJson);
+                return 200;  // OK - Product created successfully
+            }
+        } catch (SQLException e) {
             if (e.getSQLState().equals("23505")) {
-                return 409; // Duplicate entry
-            }
-            else {
-                return 400; // Internal Server Error
+                return 409;  // Duplicate entry
+            } else {
+                return 400;  // Internal Server Error
             }
         }
+        return 400;  // Default error if insertion failed
     }
+
+
 
     public int deleteProduct(int id, String name, float price, int quantity) {
         String sql = "DELETE FROM products WHERE id = ? AND name = ? AND price = ? AND" +
@@ -117,6 +228,8 @@ public class ProductDatabase {
 
             // Product had been deleted if number of rows has changed
             if (affectedRows > 0) {
+                // After deleting from the database, also remove from Redis if it's cached
+                invalidateInRedis("product:" + id);
                 return 200;
             }
             // As specified in Piazza post @127
@@ -129,15 +242,17 @@ public class ProductDatabase {
         }
     }
 
+
+
     public int updateProduct(int id, String name, String description, float price, int quantity) {
         StringBuilder sqlUpdate = new StringBuilder("UPDATE products SET ");
         int valueCount = 0;
 
-        // Check if the price or quantity is provided and less than or equal to 0, return 400 for bad request.
-        if ((price != 0 && price <= 0) || (quantity != 0 && quantity <= 0)) {
-            return 400;
+        if ((price != 0 && price < 0) || (quantity != 0 && quantity < 0)) {
+            return 400;  // Bad request due to negative price or quantity
         }
 
+        // Construct the SQL update statement based on provided values
         if (name != null) {
             sqlUpdate.append("name = ?, ");
             valueCount++;
@@ -155,15 +270,18 @@ public class ProductDatabase {
             valueCount++;
         }
 
-        // Return 200 to imply that no fields have been updated but still a success (although no change in the db)
         if (valueCount == 0) {
-            return 200;
+            return 200;  // No update was needed
         }
-        sqlUpdate.delete(sqlUpdate.length() - 2, sqlUpdate.length());
+
+        sqlUpdate.delete(sqlUpdate.length() - 2, sqlUpdate.length());  // Remove trailing comma and space
         sqlUpdate.append(" WHERE id = ?");
+
         try (Connection conn = this.connect();
              PreparedStatement statement = conn.prepareStatement(sqlUpdate.toString())) {
             int valueIndex = 1;
+
+            // Set values for the update statement
             if (name != null) {
                 statement.setString(valueIndex++, name);
             }
@@ -179,17 +297,23 @@ public class ProductDatabase {
             statement.setInt(valueIndex, id);
 
             int affectedRows = statement.executeUpdate();
+
             if (affectedRows > 0) {
+                // After updating the database, update Redis if the product is cached
+//                String newProductJson = String.format("{\"id\": %d, \"name\": \"%s\", \"description\": \"%s\", \"price\": %.2f, \"quantity\": %d}",
+//                                                       id, name != null ? name : "", description != null ? description : "", price, quantity);
+//                storeInRedis("product:" + id, newProductJson);
+		// Invalidate the cache
+		invalidateInRedis("product:" + id);
                 return 200;
+            } else {
+                return 404;  // Product not found
             }
-            else {
-                return 404; // Not Found - Product with given ID not found
-            }
-        }
-        catch (SQLException e) {
-            return 404; // Internal Server Error
+        } catch (SQLException e) {
+            return 400;  // Internal Server Error
         }
     }
+
 
 
 }

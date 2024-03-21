@@ -42,6 +42,11 @@ public class OrderService
             System.exit(1);
         }
 
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+        System.out.println("Shutting down User Database connection pool...");
+        orderDB.shutdownPool();
+        }));
+
         port = Integer.parseInt(args[0]);
 	dockerIp = args[1];
 	dbPort = args[2];
@@ -99,7 +104,6 @@ public class OrderService
 		    // Send a 405 Method Not Allowed response for non-POST requests
 		    jsonObject.put("status", "Invalid Request");
 		    sendResponse(exchange, 405, jsonObject.toString());
-		    exchange.close();
 		    return;
 		}
 		// Check that the command is "place order"
@@ -108,7 +112,6 @@ public class OrderService
 			// Remove the command from the JSON object
 			jsonObject.remove("command");
 			sendResponse(exchange, 400, jsonObject.toString());
-			exchange.close();
 			return;
 		}
 		// Remove the command from the JSON object
@@ -134,7 +137,6 @@ public class OrderService
 			// Send a 405 Method Not Allowed response for non-POST requests
 			jsonObject.put("status", "Invalid Request");
                         sendResponse(exchange, 400, jsonObject.toString());
-			exchange.close();
 			return;
                 }
 
@@ -157,7 +159,7 @@ public class OrderService
                 }
                 String response = jsonObject.toString();
                 sendResponse(exchange, statusCode, response);
-
+		return;
             }
             catch (Exception e)
             {
@@ -192,16 +194,19 @@ public class OrderService
 
                     if (response.equals("{}")) {
                         sendResponse(exchange, 404, new JSONObject().toString());
+			return;
                     }
                     else {
 
                         sendResponse(exchange, 200, response);
+			return;
                     }
 
                 }
                 else {
                     //status code 405 for non Get Requests
                     sendResponse(exchange, 405, new JSONObject().toString());
+		    return;
                 }
             }
             catch (Exception e)
