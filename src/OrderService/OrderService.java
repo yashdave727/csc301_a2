@@ -104,6 +104,7 @@ public class OrderService
 		    // Send a 405 Method Not Allowed response for non-POST requests
 		    jsonObject.put("status", "Invalid Request");
 		    sendResponse(exchange, 405, jsonObject.toString());
+		    return;
 		}
 		// Check that the command is "place order"
 		if (!jsonObject.has("command") || !jsonObject.getString("command").equals("place order")) {
@@ -111,6 +112,7 @@ public class OrderService
 			// Remove the command from the JSON object
 			jsonObject.remove("command");
 			sendResponse(exchange, 400, jsonObject.toString());
+			return;
 		}
 		// Remove the command from the JSON object
 		jsonObject.remove("command");
@@ -135,6 +137,7 @@ public class OrderService
 			// Send a 405 Method Not Allowed response for non-POST requests
 			jsonObject.put("status", "Invalid Request");
                         sendResponse(exchange, 400, jsonObject.toString());
+			return;
                 }
 
                 JSONObject product = new JSONObject(orderDB.getProduct(prodID));
@@ -155,7 +158,7 @@ public class OrderService
                 }
                 String response = jsonObject.toString();
                 sendResponse(exchange, statusCode, response);
-
+		return;
             }
             catch (Exception e)
             {
@@ -167,7 +170,7 @@ public class OrderService
         }
     }
 
-   
+
     static class PurchaseHandler implements HttpHandler
     {
         @Override
@@ -187,16 +190,19 @@ public class OrderService
 
                     if (response.equals("{}")) {
                         sendResponse(exchange, 404, new JSONObject().toString());
+			return;
                     }
                     else {
 
                         sendResponse(exchange, 200, response);
+			return;
                     }
 
                 }
                 else {
                     //status code 405 for non Get Requests
                     sendResponse(exchange, 405, new JSONObject().toString());
+		    return;
                 }
             }
             catch (Exception e)
@@ -209,7 +215,7 @@ public class OrderService
         }
     }
 
-    
+
     /**
      * Sends an HTTP response with the specified response code and content.
      *

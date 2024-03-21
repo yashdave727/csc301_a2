@@ -58,29 +58,42 @@ class UserDatabase {
 
 
     public void storeInRedis(String key, String json) {
-        Jedis jedis = connectToRedis(); // Adjust host and port if necessary
-        if (jedis != null) {
-            jedis.set(key, json);
-            jedis.close();
-        }
+	try {
+	        Jedis jedis = connectToRedis(); // Adjust host and port if necessary
+	        if (jedis != null) {
+	            jedis.set(key, json);
+	            jedis.close();
+	        }
+	} catch (Exception e) {
+		System.out.println("Failed to store in Redis: " + e.getMessage());
+	}
     }
 
     public String retrieveFromRedis(String key) {
-        Jedis jedis = connectToRedis(); // Adjust host and port if necessary
-        if (jedis != null) {
-            String value = jedis.get(key);
-            jedis.close();
-            return value;
-        }
+	try {
+	        Jedis jedis = connectToRedis(); // Adjust host and port if necessary
+	        if (jedis != null) {
+	            String value = jedis.get(key);
+	            jedis.close();
+	            return value;
+	        }
         return null;
+	} catch (Exception e) {
+		System.out.println("Failed to retrieve from Redis: " + e.getMessage());
+		return null;
+	}
     }
 
     public void invalidateInRedis(String key) {
-        Jedis jedis = connectToRedis(); // Adjust host and port if necessary
-        if (jedis != null) {
-            jedis.del(key);
-            jedis.close();
-        }
+	try {
+	        Jedis jedis = connectToRedis(); // Adjust host and port if necessary
+	        if (jedis != null) {
+	            jedis.del(key);
+	            jedis.close();
+	        }
+	} catch (Exception e) {
+		System.out.println("Failed to invalidate in Redis: " + e.getMessage());
+	}
     }
 
 
