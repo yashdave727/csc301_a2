@@ -146,6 +146,7 @@ public class OrderService
                         // Send a 405 Method Not Allowed response for non-POST requests
 			jsonObject.put("status", "Invalid Request");
 			sendResponse(exchange, 400, jsonObject.toString());
+			exchange.close();
                     	return;
 		}
 
@@ -165,6 +166,9 @@ public class OrderService
                 // If something weird happens, we send a 400 error code representing an invalid HTTP request
 		jsonObject.put("status", "Invalid Request");
                 sendResponse(exchange, 400, jsonObject.toString());
+		System.out.println("Error: " + e);
+		System.out.println("Error: " + e.getMessage());
+		System.out.println("Error: " + e.getStackTrace());
             }
             exchange.close();
         }

@@ -57,6 +57,7 @@ start_os() {
 	DB_PORT=$3
 	RD_PORT=$4
 	java -cp "$script_dir/compiled/OrderService:$script_dir/src/jedis-5.2.0-beta1.jar:$script_dir/compiled/json-20231013.jar:$script_dir/compiled/postgresql-42.7.2.jar:$script_dir/compiled/HikariCP-5.1.0.jar:$script_dir/compiled/slf4j-api-1.7.30.jar:$script_dir/compiled/slf4j-simple-1.7.30.jar" OrderService "$ORDER_PORT" "$DOCKER_IP" "$DB_PORT" "$RD_PORT"
+
 }
 
 # Function to start the WorkloadParser
@@ -95,7 +96,7 @@ case "$1" in
         start_ps "$2" "$3" "$4" "$5"
         ;;
     -i)
-	start_iscs "$2"
+	    start_iscs "$2"
         ;;
     -o)
         start_os "$2" "$3" "$4" "$5"
@@ -104,7 +105,7 @@ case "$1" in
         start_wg "$2"
 	;;
     -d)
-	start_db
+	    start_db
 	;;
     *)
         echo "Usage: $0 { -c | -d | -u port | -p port | -i port | -o port | -w workloadfile }"
