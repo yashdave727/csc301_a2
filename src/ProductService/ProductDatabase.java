@@ -102,6 +102,15 @@ public class ProductDatabase {
 
 	dataSource = new HikariDataSource(config);
 
+	// Test redis connection
+	Jedis jedis = connectToRedis();
+	if (jedis != null) {
+		System.out.println("Connected to Redis server at " + redisHost + ":" + redisPort);
+		jedis.close();
+	} else {
+		System.out.println("Failed to connect to Redis server at " + redisHost + ":" + redisPort);
+	}
+
         try (Connection con = connect();
              Statement statement = con.createStatement()) {
             String sql = "CREATE TABLE IF NOT EXISTS products (" +
