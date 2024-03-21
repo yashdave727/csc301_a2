@@ -62,6 +62,15 @@ class OrderDatabase {
 
 	dataSource = new HikariDataSource(config);
 
+	// Test redis connection
+	Jedis jedis = connectToRedis();
+	if (jedis != null) {
+		System.out.println("Connected to Redis server at " + redisHost + ":" + redisPort);
+		jedis.close();
+	} else {
+		System.out.println("Failed to connect to Redis server at " + redisHost + ":" + redisPort);
+	}
+
         try (Connection con = connect();
             Statement statement = con.createStatement()) {
             String sql = "CREATE TABLE IF NOT EXISTS orders (" +
@@ -120,7 +129,7 @@ class OrderDatabase {
     public static void shutdownPool() {
         if (dataSource != null && !dataSource.isClosed()) {
             dataSource.close();
-            System.out.println("Product Database connection pool successfully shut down.");
+            System.out.println("Order Database connection pool successfully shut down.");
         }
     }
 
