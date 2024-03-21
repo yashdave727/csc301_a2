@@ -1,3 +1,5 @@
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -16,29 +18,50 @@ class OrderDatabase {
     private static final String password = "assignmentpassword";
     public static String redisHost = "localhost"; // Change this to your Redis server's IP address
     public static int redisPort = 6379;
+    public static HikariDataSource dataSource;
+
+ //    static {
+ //        // Configure HikariCP
+ //        HikariConfig config = new HikariConfig();
+ //        // Adjust the JDBC URL, username, and password to match your PostgreSQL container setup
+ //        config.setJdbcUrl("jdbc:postgresql://142.1.44.57:5432/assignmentdb");
+ //        config.setUsername("assignmentuser");
+ //        config.setPassword("assignmentpassword");
+ //
+ //        // // Optional: Configure additional HikariCP settings as needed
+ //        // config.addDataSourceProperty("cachePrepStmts", "true");
+ //        // config.addDataSourceProperty("prepStmtCacheSize", "250");
+ //        // config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
+ //
+ //        dataSource = new HikariDataSource(config);
+ //    }
 
 
     /**
      * The connect method is used to establish a connection to the SQLite database.
      * @return value is a connection object to the SQLite database.
      */
-    private Connection connect() {
-        Connection con = null;
-        try {
-	    // TODO: Add REDIS connection
-            con = DriverManager.getConnection(url, user, password);
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-        }
-        return con;
+    private Connection connect() throws SQLException {
+        return dataSource.getConnection();
     }
 
     /**
      * The initialize method which is used in the constructor is for initializing the database by creating a table
      * for users if it does not already exist.
      */
-    public void initialize(String dockerIp, String dbPort, String redisPort) {
+    public void initialize(String dockerIp, String dbPort, String _redisPort) {
 	url = "jdbc:postgresql://" + dockerIp + ":" + dbPort + "/assignmentdb";
+	redisPort = Integer.parseInt(_redisPort);
+	redisHost = dockerIp;
+
+	// Configure HikariCP
+	HikariConfig config = new HikariConfig();
+	config.setJdbcUrl(url);
+	config.setUsername(user);
+	config.setPassword(password);
+
+	dataSource = new HikariDataSource(config);
+
         try (Connection con = connect();
             Statement statement = con.createStatement()) {
             String sql = "CREATE TABLE IF NOT EXISTS orders (" +
@@ -94,6 +117,13 @@ class OrderDatabase {
     }
 
 
+    public static void shutdownPool() {
+        if (dataSource != null && !dataSource.isClosed()) {
+            dataSource.close();
+            System.out.println("Product Database connection pool successfully shut down.");
+        }
+    }
+
     /**
      * Creates a new user in the database.
      * @param user_id is the ID of the user making the order.
@@ -111,7 +141,8 @@ class OrderDatabase {
             statement.executeUpdate();
 
             int updated = updateQuantity(prod_id, newQuantity);
-
+	    // Invalidate the Redis cache
+	    invalidateInRedis("orders:" + user_id);
             return updated; // OK - User created successfully
         }
         // The PostgreSQL 23505 UNIQUE VIOLATION error occurs when a unique constraint is violated. See the link below
@@ -133,6 +164,12 @@ class OrderDatabase {
      * @return A JSON string containing the products ID as a key and quantity as a value
      */
     public String getPurchased(int user_id) {
+	// Attempt to retrieve from Redis
+	String cachedOrder = retrieveFromRedis("orders:" + user_id);
+	if (cachedOrder != null) {
+		return cachedOrder;
+	}
+
         String sql = "SELECT prod_id, quantity FROM orders WHERE user_id = ?";
         try (Connection con = this.connect();
              PreparedStatement statement = con.prepareStatement(sql)) {
@@ -165,6 +202,11 @@ class OrderDatabase {
      * @return A JSON string containing the user's information, or an empty string if not found.
      */
     public String getUser(int id) {
+	// Attempt to retrieve from Redis
+	String cachedUser = retrieveFromRedis("user:" + id);
+	if (cachedUser != null) {
+		return cachedUser;
+	}
         String sql = "SELECT id, username, email, password FROM users WHERE id = ?";
         try (Connection con = this.connect();
              PreparedStatement statement = con.prepareStatement(sql)) {
@@ -192,6 +234,11 @@ class OrderDatabase {
      * @return A JSON string containing the user's information, or an empty string if not found.
      */
     public String getProduct(int id) {
+	// Attempt to retrieve from Redis
+	String cachedProduct = retrieveFromRedis("product:" + id);
+	if (cachedProduct != null) {
+		return cachedProduct;
+	}
         String sql = "SELECT id, name, description, price, quantity FROM products WHERE id = ?"; // Make sure the table name is 'products' not 'users'
         try (Connection con = this.connect();
              PreparedStatement statement = con.prepareStatement(sql)) {
