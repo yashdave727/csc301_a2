@@ -5,9 +5,6 @@ script_dir=$(dirname "$(readlink -f "$0")")
 
 # Function to compile Java code
 compile_code() {
-    javac -d "$script_dir/compiled/OrderService" -cp "$script_dir/src/json-20231013.jar:$script_dir/src/postgresql-42.7.2.jar" "$script_dir/src/OrderService"/*.java
-    javac -d "$script_dir/compiled/ProductService" -cp "$script_dir/src/json-20231013.jar:$script_dir/src/postgresql-42.7.2.jar" "$script_dir/src/ProductService"/*.java
-    javac -d "$script_dir/compiled/UserService" -cp "$script_dir/src/json-20231013.jar:$script_dir/src/postgresql-42.7.2.jar" "$script_dir/src/UserService"/*.java
 
     # Copy all necessary dependencies
     cp "$script_dir/src/workload_parser.py" "$script_dir/compiled/"
@@ -15,6 +12,11 @@ compile_code() {
     cp "$script_dir/src/json-20231013.jar" "$script_dir/compiled/"
     cp "$script_dir/src/postgresql-42.7.2.jar" "$script_dir/compiled/"
     cp "$script_dir/src/jedis-5.2.0-beta1.jar" "$script_dir/compiled/"
+    
+    # Compile the Java code
+    javac -d "$script_dir/compiled/OrderService" -cp "$script_dir/src/jedis-5.2.0-beta1.jar:$script_dir/src/json-20231013.jar:$script_dir/src/postgresql-42.7.2.jar" "$script_dir/src/OrderService"/*.java
+    javac -d "$script_dir/compiled/ProductService" -cp "$script_dir/src/jedis-5.2.0-beta1.jar:$script_dir/src/json-20231013.jar:$script_dir/src/postgresql-42.7.2.jar" "$script_dir/src/ProductService"/*.java
+    javac -d "$script_dir/compiled/UserService" -cp "$script_dir/src/jedis-5.2.0-beta1.jar:$script_dir/src/json-20231013.jar:$script_dir/src/postgresql-42.7.2.jar" "$script_dir/src/UserService"/*.java
 
     if [ "$?" -eq 0 ]; then
         echo "Compilation successful."
