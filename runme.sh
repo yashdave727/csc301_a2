@@ -98,7 +98,7 @@ case "$1" in
 	start_iscs "$2"
         ;;
     -o)
-        start_os "$2" "$3" "$4"
+        start_os "$2" "$3" "$4" "$5"
         ;;
     -w)
         start_wg "$2"
