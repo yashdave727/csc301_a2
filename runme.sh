@@ -53,9 +53,10 @@ start_ps() {
 start_os() {
 	# Run the order service with the order port and the ISCS IP and port
 	ORDER_PORT=$1
-	ISCS_IP=$2
-	ISCS_PORT=$3
-	java -cp "$script_dir/compiled/OrderService:$script_dir/src/jedis-5.2.0-beta1.jar:$script_dir/compiled/json-20231013.jar:$script_dir/compiled/postgresql-42.7.2.jar:$script_dir/compiled/HikariCP-5.1.0.jar:$script_dir/compiled/slf4j-api-1.7.30.jar:$script_dir/compiled/slf4j-simple-1.7.30.jar" OrderService "$ORDER_PORT" "$ISCS_IP:$ISCS_PORT"
+	DOCKER_IP=$2
+	DB_PORT=$3
+	RD_PORT=$4
+	java -cp "$script_dir/compiled/OrderService:$script_dir/src/jedis-5.2.0-beta1.jar:$script_dir/compiled/json-20231013.jar:$script_dir/compiled/postgresql-42.7.2.jar:$script_dir/compiled/HikariCP-5.1.0.jar:$script_dir/compiled/slf4j-api-1.7.30.jar:$script_dir/compiled/slf4j-simple-1.7.30.jar" OrderService "$ORDER_PORT" "$DOCKER_IP" "$DB_PORT" "$RD_PORT"
 }
 
 # Function to start the WorkloadParser
